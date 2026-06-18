@@ -77,6 +77,23 @@ test('capturing an idea adds it to the Ideas view', () => {
   expect(screen.getAllByText(/Start scripting/).length).toBeGreaterThan(0);
 });
 
+test('the sidebar can be collapsed and reopened', () => {
+  renderApp();
+  expect(screen.getByText('VideoFlow')).toBeTruthy(); // sidebar present
+  fireEvent.click(screen.getByTitle('Collapse sidebar'));
+  expect(screen.queryByText('VideoFlow')).toBeNull(); // sidebar gone
+  fireEvent.click(screen.getByTitle('Open sidebar'));
+  expect(screen.getByText('VideoFlow')).toBeTruthy(); // back
+});
+
+test('the profile name can be edited in settings and shows in the sidebar', () => {
+  renderApp();
+  fireEvent.click(screen.getByTitle('Settings'));
+  const nameInput = screen.getByPlaceholderText('Your name');
+  fireEvent.change(nameInput, { target: { value: 'Sam Chen' } });
+  expect(screen.getByText('Sam Chen')).toBeTruthy();
+});
+
 test('new video modal creates a video and lands on the pipeline', () => {
   renderApp();
   fireEvent.click(screen.getByText('New video'));

@@ -24,11 +24,17 @@ const SETTINGS_KEY = 'videoflow.settings.v1';
 interface Settings {
   accentColor: string;
   weekStartsMonday: boolean;
+  userName: string;
+  userRole: string;
+  sidebarCollapsed: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
   accentColor: '#5B5BD6',
   weekStartsMonday: false,
+  userName: 'Alex Rivera',
+  userRole: 'Solo creator',
+  sidebarCollapsed: false,
 };
 
 function loadVideos(): Video[] {
@@ -91,6 +97,9 @@ export interface Store {
   gotoToday: () => void;
   setAccent: (c: string) => void;
   toggleWeekStart: () => void;
+  setUserName: (name: string) => void;
+  setUserRole: (role: string) => void;
+  toggleSidebar: () => void;
   resetData: () => void;
   // mutations
   setStage: (id: string, stageId: StageId) => void;
@@ -292,6 +301,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setAccent: (c) => setSettings((s) => ({ ...s, accentColor: c })),
       toggleWeekStart: () =>
         setSettings((s) => ({ ...s, weekStartsMonday: !s.weekStartsMonday })),
+      setUserName: (name) => setSettings((s) => ({ ...s, userName: name })),
+      setUserRole: (role) => setSettings((s) => ({ ...s, userRole: role })),
+      toggleSidebar: () =>
+        setSettings((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed })),
       resetData: () => setVideos(SEED_VIDEOS),
       setStage,
       moveStage,

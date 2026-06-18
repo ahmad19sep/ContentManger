@@ -118,6 +118,31 @@ export function Sidebar() {
           V
         </div>
         <div style={{ fontWeight: 700, fontSize: 15.5, letterSpacing: '-0.02em' }}>VideoFlow</div>
+        <Hover
+          as="button"
+          onClick={s.toggleSidebar}
+          title="Collapse sidebar"
+          baseStyle={{
+            marginLeft: 'auto',
+            width: 28,
+            height: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--muted)',
+            borderRadius: 7,
+            cursor: 'pointer',
+          }}
+          hoverStyle={{ background: '#EDEBE6', color: 'var(--ink)' }}
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path d="M9 4v16" />
+            <path d="m15 9-2 3 2 3" />
+          </svg>
+        </Hover>
       </div>
 
       <Hover as="button" baseStyle={navStyle('dashboard')} hoverStyle={hover} onClick={go('dashboard')}>
@@ -202,11 +227,15 @@ export function Sidebar() {
             flex: 'none',
           }}
         >
-          A
+          {(s.settings.userName.trim()[0] || 'A').toUpperCase()}
         </div>
         <div style={{ lineHeight: 1.25, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600 }}>Alex Rivera</div>
-          <div style={{ fontSize: 11, color: 'var(--muted)' }}>Solo creator</div>
+          <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {s.settings.userName || 'Unnamed'}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {s.settings.userRole}
+          </div>
         </div>
       </div>
     </aside>

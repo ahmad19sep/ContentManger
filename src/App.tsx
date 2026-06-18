@@ -46,10 +46,12 @@ export default function App() {
       }
     : { flex: 1, display: 'flex', position: 'relative', height: '100vh', overflow: 'hidden', background: 'var(--surface)' };
 
+  const showSidebar = !isMobile && !s.settings.sidebarCollapsed;
+
   return (
     <div style={stageStyle}>
       <div style={frameStyle}>
-        {!isMobile && <Sidebar />}
+        {showSidebar && <Sidebar />}
 
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: 'var(--canvas)' }}>
           <Topbar />

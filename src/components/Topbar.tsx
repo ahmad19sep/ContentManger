@@ -80,6 +80,22 @@ function SettingsMenu() {
           }}
         >
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 9 }}>
+            Profile
+          </div>
+          <input
+            value={s.settings.userName}
+            onChange={(e) => s.setUserName(e.target.value)}
+            placeholder="Your name"
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, outline: 'none', color: 'var(--ink)', background: 'var(--canvas)', marginBottom: 7 }}
+          />
+          <input
+            value={s.settings.userRole}
+            onChange={(e) => s.setUserRole(e.target.value)}
+            placeholder="Your role"
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--line)', borderRadius: 8, fontSize: 13, outline: 'none', color: 'var(--ink)', background: 'var(--canvas)', marginBottom: 16 }}
+          />
+
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 9 }}>
             Accent
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -151,9 +167,24 @@ export function Topbar() {
         background: 'var(--surface)',
       }}
     >
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: '-0.02em' }}>{title}</div>
-        <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 1 }}>{sub}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+        {!isMobile && s.settings.sidebarCollapsed && (
+          <button
+            onClick={s.toggleSidebar}
+            title="Open sidebar"
+            style={{ flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 9, color: 'var(--muted)', cursor: 'pointer' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18" />
+              <path d="M3 12h18" />
+              <path d="M3 18h18" />
+            </svg>
+          </button>
+        )}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: '-0.02em' }}>{title}</div>
+          <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 1 }}>{sub}</div>
+        </div>
       </div>
 
       {!isMobile && (
