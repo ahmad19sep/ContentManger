@@ -1,0 +1,75 @@
+:root {
+  --accent: #5B5BD6;
+  --ink: #1d1d22;
+  --muted: #8A8A92;
+  --line: #E8E6E0;
+  --surface: #ffffff;
+  --canvas: #FAF9F5;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--ink);
+  background: var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button {
+  font-family: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e0ded8;
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #cfcdc6;
+  background-clip: content-box;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes drawerIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes modalIn {
+  from { transform: translateY(14px) scale(0.985); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
