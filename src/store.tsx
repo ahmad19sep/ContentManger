@@ -164,6 +164,7 @@ export interface Store {
   updateDrive: (id: string, val: string) => void;
   updatePublish: (id: string, val: string) => void;
   updateAssignee: (id: string, userId: string | null) => void;
+  createDriveFolder: (id: string) => Promise<string | null>;
   deleteVideo: (id: string) => void;
   openModal: (stage?: StageId) => void;
   closeModal: () => void;
@@ -338,6 +339,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const updateAssignee = (id: string, assigneeId: string | null) => {
       mutate(id, (v) => ({ ...v, assigneeId }));
       if (cloud) patchVideo(id, { assigneeId }).catch(reportError);
+    };
+
+    const createDriveFolder = async (id: string) => {
+      const link = await syncVideoFolder(id);
+      if (link) mutate(id, (v) => ({ ...v, drive: link }));
+      return link;
     };
 
     const deleteVideo = (id: string) => {
@@ -553,6 +560,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateDrive,
       updatePublish,
       updateAssignee,
+      createDriveFolder,
       deleteVideo,
       openModal,
       closeModal,

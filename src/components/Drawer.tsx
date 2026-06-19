@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { CHECK, STAGES } from '../constants';
 import { stageIndex, stageObj, videoMeta } from '../display';
 import { useStore } from '../store';
@@ -6,6 +7,7 @@ import { Avatar, Dot, Hover } from './ui';
 
 export function Drawer() {
   const s = useStore();
+  const [creatingFolder, setCreatingFolder] = useState(false);
   if (!s.selectedId) return null;
   const v = s.videos.find((x) => x.id === s.selectedId);
   if (!v) return null;
@@ -175,6 +177,24 @@ export function Drawer() {
               Open
             </button>
           </div>
+
+          {s.cloud && !driveUrl && (
+            <button
+              onClick={async () => {
+                setCreatingFolder(true);
+                const link = await s.createDriveFolder(v.id);
+                setCreatingFolder(false);
+                if (!link) alert('Could not create the folder. Connect Google Drive first in the workspace switcher → Members & invites.');
+              }}
+              disabled={creatingFolder}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, marginTop: -8, marginBottom: 20, border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 9, padding: '8px 13px', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', cursor: creatingFolder ? 'wait' : 'pointer' }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9A227" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              </svg>
+              {creatingFolder ? 'Creating Drive folder…' : '+ Create Drive folder'}
+            </button>
+          )}
 
           <SectionLabel>{m.stageLabel} checklist</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 20 }}>
