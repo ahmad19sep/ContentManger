@@ -71,6 +71,7 @@ export function WorkspaceModal({ onClose }: { onClose: () => void }) {
       );
       setEmail('');
       await refresh();
+      await s.refreshMembers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not invite.');
     } finally {
@@ -160,7 +161,7 @@ export function WorkspaceModal({ onClose }: { onClose: () => void }) {
                   </div>
                   <span style={{ fontSize: 11, fontWeight: 600, color: m.role === 'owner' ? 'var(--accent)' : 'var(--muted)', textTransform: 'capitalize' }}>{m.role}</span>
                   {isOwner && m.role !== 'owner' && (
-                    <button onClick={async () => { await removeMember(ws.id, m.userId); refresh(); }} title="Remove" style={{ border: 'none', background: 'transparent', color: '#E5594D', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: '2px 6px' }}>
+                    <button onClick={async () => { await removeMember(ws.id, m.userId); refresh(); s.refreshMembers(); }} title="Remove" style={{ border: 'none', background: 'transparent', color: '#E5594D', cursor: 'pointer', fontSize: 12, fontWeight: 600, padding: '2px 6px' }}>
                       Remove
                     </button>
                   )}

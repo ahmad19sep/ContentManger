@@ -7,6 +7,7 @@ import { Hover } from './ui';
 
 const TITLES: Record<ViewId, [string, string]> = {
   dashboard: ['Dashboard', "Here's where your content stands today"],
+  mine: ['My Tasks', 'Videos assigned to you'],
   pipeline: ['Pipeline', 'Drag cards across stages to update status'],
   calendar: ['Calendar', 'Scheduled publish dates across platforms'],
   ideas: ['Ideas', 'Capture and develop new concepts'],

@@ -1,7 +1,7 @@
 import { CHECK, STAGES } from '../constants';
 import { stageIndex, stageObj, videoMeta } from '../display';
 import { useStore } from '../store';
-import { Dot, Hover } from './ui';
+import { Avatar, Dot, Hover } from './ui';
 
 export function Drawer() {
   const s = useStore();
@@ -94,6 +94,27 @@ export function Drawer() {
               {nextLabel}
             </button>
           </div>
+
+          {s.cloud && s.members.length > 0 && (
+            <>
+              <SectionLabel>Assignee</SectionLabel>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                <Avatar name={s.members.find((mem) => mem.userId === v.assigneeId)?.fullName ?? '·'} size={28} />
+                <select
+                  value={v.assigneeId ?? ''}
+                  onChange={(e) => s.updateAssignee(v.id, e.target.value || null)}
+                  style={{ flex: 1, padding: '9px 11px', border: '1px solid var(--line)', borderRadius: 9, fontSize: 13, color: 'var(--ink)', background: 'var(--canvas)', outline: 'none', cursor: 'pointer' }}
+                >
+                  <option value="">Unassigned</option>
+                  {s.members.map((mem) => (
+                    <option key={mem.userId} value={mem.userId}>
+                      {mem.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 16px', padding: 16, background: 'var(--canvas)', border: '1px solid var(--line)', borderRadius: 12, marginBottom: 18 }}>
             <Field label="Priority">

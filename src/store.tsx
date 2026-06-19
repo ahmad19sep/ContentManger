@@ -18,7 +18,9 @@ import {
 } from './lib/videosApi';
 import {
   createWorkspace as apiCreateWorkspace,
+  listMembers,
   listWorkspaces,
+  type Member,
   type WorkspaceSummary,
 } from './lib/workspacesApi';
 import { SEED_VIDEOS } from './seed';
@@ -99,9 +101,11 @@ export interface Store {
   workspaces: WorkspaceSummary[];
   currentWorkspaceId: string | null;
   currentWorkspace: WorkspaceSummary | null;
+  members: Member[];
   switchWorkspace: (id: string) => void;
   createWorkspace: (name: string) => Promise<void>;
   refreshWorkspaces: () => Promise<void>;
+  refreshMembers: () => Promise<void>;
   // ephemeral UI state
   view: ViewId;
   device: DeviceId;
@@ -143,6 +147,7 @@ export interface Store {
   updateNote: (id: string, val: string) => void;
   updateDrive: (id: string, val: string) => void;
   updatePublish: (id: string, val: string) => void;
+  updateAssignee: (id: string, userId: string | null) => void;
   deleteVideo: (id: string) => void;
   openModal: (stage?: StageId) => void;
   closeModal: () => void;
@@ -159,6 +164,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [members, setMembers] = useState<Member[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
   const [canImportLocal, setCanImportLocal] = useState(false);
 
@@ -205,6 +211,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const chosen = ws.find((w) => w.id === stored)?.id ?? ws[0]?.id ?? null;
         setWorkspaceId(chosen);
         setVideos(chosen ? await listVideos(chosen) : []);
+        if (!active) return;
+        setMembers(chosen ? await listMembers(chosen).catch(() => []) : []);
         if (!active) return;
         setCanImportLocal((readStoredVideos()?.length ?? 0) > 0);
       } catch (e) {
@@ -294,6 +302,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (cloud) patchVideo(id, { publish: val }).catch(reportError);
     };
 
+    const updateAssignee = (id: string, assigneeId: string | null) => {
+      mutate(id, (v) => ({ ...v, assigneeId }));
+      if (cloud) patchVideo(id, { assigneeId }).catch(reportError);
+    };
+
     const deleteVideo = (id: string) => {
       setVideos((vs) => vs.filter((v) => v.id !== id));
       setSelectedId((cur) => (cur === id ? null : cur));
@@ -374,6 +387,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .then((vids) => setVideos(vids))
         .catch(reportError)
         .finally(() => setDataLoading(false));
+      listMembers(id)
+        .then((m) => setMembers(m))
+        .catch(() => setMembers([]));
     };
 
     const createWorkspace = async (name: string) => {
@@ -390,6 +406,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const refreshWorkspaces = async () => {
       try {
         setWorkspaces(await listWorkspaces());
+      } catch (e) {
+        reportError(e);
+      }
+    };
+
+    const refreshMembers = async () => {
+      if (!workspaceId) return;
+      try {
+        setMembers(await listMembers(workspaceId));
       } catch (e) {
         reportError(e);
       }
@@ -421,9 +446,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       workspaces,
       currentWorkspaceId: workspaceId,
       currentWorkspace: workspaces.find((w) => w.id === workspaceId) ?? null,
+      members,
       switchWorkspace,
       createWorkspace,
       refreshWorkspaces,
+      refreshMembers,
       view,
       device,
       search,
@@ -486,6 +513,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateNote,
       updateDrive,
       updatePublish,
+      updateAssignee,
       deleteVideo,
       openModal,
       closeModal,
@@ -500,6 +528,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     canImportLocal,
     workspaces,
     workspaceId,
+    members,
     userId,
     view,
     device,

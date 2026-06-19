@@ -1,3 +1,4 @@
+import { useAuth } from '../auth';
 import { PLAT, PLATFORM_IDS } from '../constants';
 import { useStore } from '../store';
 import type { ViewId } from '../types';
@@ -68,6 +69,15 @@ function CalIcon() {
   );
 }
 
+function MyTasksIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 11l3 3L22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  );
+}
+
 function IdeaIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -80,6 +90,7 @@ function IdeaIcon() {
 
 export function Sidebar() {
   const s = useStore();
+  const { user } = useAuth();
 
   const go = (v: ViewId) => () => s.setView(v);
   const navStyle = (v: ViewId) => (s.view === v ? navActive : navBase);
@@ -87,6 +98,7 @@ export function Sidebar() {
   const nPipeline = s.videos.length;
   const nCalendar = s.videos.filter((v) => v.publish).length;
   const nIdeas = s.videos.filter((v) => v.stage === 'idea').length;
+  const nMine = s.videos.filter((v) => v.assigneeId && v.assigneeId === user?.id).length;
 
   return (
     <aside
@@ -152,6 +164,13 @@ export function Sidebar() {
         <DashIcon />
         <span>Dashboard</span>
       </Hover>
+      {s.cloud && (
+        <Hover as="button" baseStyle={navStyle('mine')} hoverStyle={hover} onClick={go('mine')}>
+          <MyTasksIcon />
+          <span>My Tasks</span>
+          <span style={count}>{nMine}</span>
+        </Hover>
+      )}
       <Hover as="button" baseStyle={navStyle('pipeline')} hoverStyle={hover} onClick={go('pipeline')}>
         <PipeIcon />
         <span>Pipeline</span>

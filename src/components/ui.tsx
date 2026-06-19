@@ -30,6 +30,35 @@ export function Dot({ color, size = 8, square, style }: DotProps) {
   );
 }
 
+interface AvatarProps {
+  name: string;
+  size?: number;
+}
+
+/** Initial-in-a-circle avatar used for members/assignees. */
+export function Avatar({ name, size = 22 }: AvatarProps) {
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: 'linear-gradient(135deg,#7C5CFF,#E5594D)',
+        color: '#fff',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 700,
+        fontSize: size * 0.42,
+        flex: 'none',
+      }}
+      title={name}
+    >
+      {(name.trim()[0] || '?').toUpperCase()}
+    </span>
+  );
+}
+
 type HoverProps<T extends ElementType> = {
   as?: T;
   baseStyle: CSSProperties;

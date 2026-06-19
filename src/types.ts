@@ -17,7 +17,7 @@ export type PriorityId = 'high' | 'med' | 'low';
 
 export type DeviceId = 'desktop' | 'mobile';
 
-export type ViewId = 'dashboard' | 'pipeline' | 'calendar' | 'ideas';
+export type ViewId = 'dashboard' | 'mine' | 'pipeline' | 'calendar' | 'ideas';
 
 export interface Stage {
   id: StageId;

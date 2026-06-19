@@ -2,7 +2,7 @@ import { PLAT, PLATFORM_IDS, STAGES } from '../constants';
 import { videoMeta } from '../display';
 import { useStore } from '../store';
 import type { PlatformId, Stage, Video } from '../types';
-import { Dot, Hover } from './ui';
+import { Avatar, Dot, Hover } from './ui';
 
 function filterBtn(active: boolean): React.CSSProperties {
   return active
@@ -31,6 +31,9 @@ function filterBtn(active: boolean): React.CSSProperties {
 function Card({ video, stage }: { video: Video; stage: Stage }) {
   const s = useStore();
   const m = videoMeta(video);
+  const assignee = video.assigneeId
+    ? s.members.find((mem) => mem.userId === video.assigneeId)
+    : null;
   return (
     <Hover
       as="article"
@@ -78,6 +81,7 @@ function Card({ video, stage }: { video: Video; stage: Stage }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 11.5, fontWeight: 600, whiteSpace: 'nowrap', color: m.dueColor }}>{m.dueLabel}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {assignee && <Avatar name={assignee.fullName} size={18} />}
           {m.hasDrive && (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A9AA2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />

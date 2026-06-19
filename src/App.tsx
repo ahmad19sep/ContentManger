@@ -6,6 +6,7 @@ import { Drawer } from './components/Drawer';
 import { Ideas } from './components/Ideas';
 import { ImportBanner } from './components/ImportBanner';
 import { MobileNav } from './components/MobileNav';
+import { MyTasks } from './components/MyTasks';
 import { NewVideoModal } from './components/NewVideoModal';
 import { Pipeline } from './components/Pipeline';
 import { Sidebar } from './components/Sidebar';
@@ -16,6 +17,8 @@ import { useStore } from './store';
 function ViewContent() {
   const s = useStore();
   switch (s.view) {
+    case 'mine':
+      return <MyTasks />;
     case 'pipeline':
       return <Pipeline />;
     case 'calendar':
