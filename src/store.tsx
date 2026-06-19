@@ -24,6 +24,7 @@ import {
   type Member,
   type WorkspaceSummary,
 } from './lib/workspacesApi';
+import { syncVideoFolder } from './lib/driveApi';
 import { SEED_VIDEOS } from './seed';
 import type {
   DeviceId,
@@ -336,7 +337,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const updateAssignee = (id: string, assigneeId: string | null) => {
       mutate(id, (v) => ({ ...v, assigneeId }));
-      if (cloud) patchVideo(id, { assigneeId }).catch(reportError);
+      if (cloud) {
+        patchVideo(id, { assigneeId })
+          .then(() => syncVideoFolder(id))
+          .catch(reportError);
+      }
     };
 
     const deleteVideo = (id: string) => {
@@ -372,7 +377,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       if (cloud && workspaceId && userId) {
         insertVideo(base, workspaceId, userId)
-          .then((nv) => setVideos((vs) => [...vs, nv]))
+          .then((nv) => {
+            setVideos((vs) => [...vs, nv]);
+            syncVideoFolder(nv.id);
+          })
           .catch(reportError);
         finishCreate();
       } else {
@@ -396,7 +404,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       };
       if (cloud && workspaceId && userId) {
         insertVideo(base, workspaceId, userId)
-          .then((nv) => setVideos((vs) => [...vs, nv]))
+          .then((nv) => {
+            setVideos((vs) => [...vs, nv]);
+            syncVideoFolder(nv.id);
+          })
           .catch(reportError);
         setIdeaDraft('');
       } else {

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useAuth } from './auth';
 import { AuthScreen } from './components/AuthScreen';
 import { Calendar } from './components/Calendar';
@@ -85,8 +86,24 @@ function AppShell() {
   );
 }
 
+function useDriveRedirectNotice() {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const drive = params.get('drive');
+    if (!drive) return;
+    if (drive === 'error') {
+      alert('Google Drive connection failed: ' + (params.get('msg') || 'unknown error'));
+    }
+    params.delete('drive');
+    params.delete('msg');
+    const qs = params.toString();
+    window.history.replaceState({}, '', window.location.pathname + (qs ? `?${qs}` : ''));
+  }, []);
+}
+
 export default function App() {
   const { loading, cloud } = useAuth();
+  useDriveRedirectNotice();
 
   if (loading) return <Splash />;
   if (isSupabaseConfigured && !cloud) return <AuthScreen />;

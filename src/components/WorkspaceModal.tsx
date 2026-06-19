@@ -12,6 +12,7 @@ import {
   type Invite,
   type Member,
 } from '../lib/workspacesApi';
+import { connectDrive, getDriveStatus, isDriveAvailable, type DriveStatus } from '../lib/driveApi';
 
 const sectionLabel: React.CSSProperties = {
   fontSize: 11,
@@ -30,6 +31,7 @@ export function WorkspaceModal({ onClose }: { onClose: () => void }) {
 
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
+  const [drive, setDrive] = useState<DriveStatus | null>(null);
   const [email, setEmail] = useState('');
   const [name, setName] = useState(ws?.name ?? '');
   const [busy, setBusy] = useState(false);
@@ -44,6 +46,7 @@ export function WorkspaceModal({ onClose }: { onClose: () => void }) {
       const [m, i] = await Promise.all([listMembers(wsId), listInvites(wsId)]);
       setMembers(m);
       setInvites(i);
+      if (isDriveAvailable) getDriveStatus(wsId).then(setDrive).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load members.');
     }
@@ -185,6 +188,41 @@ export function WorkspaceModal({ onClose }: { onClose: () => void }) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* google drive */}
+          {isDriveAvailable && (
+            <div>
+              <div style={sectionLabel}>Google Drive</div>
+              {drive?.connected ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#1F9D57', flex: 'none' }} />
+                  <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    Connected{drive.email ? ` · ${drive.email}` : ''}
+                  </div>
+                  {isOwner && (
+                    <button onClick={() => connectDrive(ws.id)} style={{ border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 8, padding: '7px 12px', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', cursor: 'pointer' }}>
+                      Reconnect
+                    </button>
+                  )}
+                </div>
+              ) : isOwner ? (
+                <div>
+                  <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 9 }}>
+                    Auto-create a Drive folder for every new card and share it with its assignee.
+                  </div>
+                  <button
+                    onClick={() => connectDrive(ws.id)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 9, border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 9, padding: '9px 14px', fontSize: 13, fontWeight: 600, color: 'var(--ink)', cursor: 'pointer' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.5 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.3-.4-3.5z" /><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.5 29.5 4.5 24 4.5 16.3 4.5 9.7 8.9 6.3 14.7z" /><path fill="#4CAF50" d="M24 43.5c5.4 0 10.3-2 13.9-5.2l-6.4-5.4c-2 1.5-4.6 2.5-7.5 2.5-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.6 39 16.2 43.5 24 43.5z" /><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.4l6.4 5.4c-.5.4 6.8-4.9 6.8-14.8 0-1.2-.1-2.3-.4-3.5z" /></svg>
+                    Connect Google Drive
+                  </button>
+                </div>
+              ) : (
+                <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Not connected. The workspace owner can connect Google Drive.</div>
+              )}
             </div>
           )}
 
