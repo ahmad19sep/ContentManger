@@ -2,6 +2,7 @@ import { PLAT, PLATFORM_IDS } from '../constants';
 import { useStore } from '../store';
 import type { ViewId } from '../types';
 import { Dot, Hover } from './ui';
+import { WorkspaceBar } from './WorkspaceBar';
 
 const navBase: React.CSSProperties = {
   display: 'flex',
@@ -144,6 +145,8 @@ export function Sidebar() {
           </svg>
         </Hover>
       </div>
+
+      <WorkspaceBar />
 
       <Hover as="button" baseStyle={navStyle('dashboard')} hoverStyle={hover} onClick={go('dashboard')}>
         <DashIcon />

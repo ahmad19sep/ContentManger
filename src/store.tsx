@@ -15,8 +15,12 @@ import {
   listVideos,
   patchVideo,
   removeVideo,
-  resolveWorkspaceId,
 } from './lib/videosApi';
+import {
+  createWorkspace as apiCreateWorkspace,
+  listWorkspaces,
+  type WorkspaceSummary,
+} from './lib/workspacesApi';
 import { SEED_VIDEOS } from './seed';
 import type {
   DeviceId,
@@ -29,6 +33,7 @@ import type {
 
 const VIDEOS_KEY = 'videoflow.videos.v1';
 const SETTINGS_KEY = 'videoflow.settings.v1';
+const WS_KEY = 'videoflow.workspace';
 
 interface Settings {
   accentColor: string;
@@ -90,6 +95,13 @@ export interface Store {
   cloud: boolean;
   dataLoading: boolean;
   canImportLocal: boolean;
+  // workspaces (cloud)
+  workspaces: WorkspaceSummary[];
+  currentWorkspaceId: string | null;
+  currentWorkspace: WorkspaceSummary | null;
+  switchWorkspace: (id: string) => void;
+  createWorkspace: (name: string) => Promise<void>;
+  refreshWorkspaces: () => Promise<void>;
   // ephemeral UI state
   view: ViewId;
   device: DeviceId;
@@ -145,6 +157,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const [videos, setVideos] = useState<Video[]>(loadVideos);
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [canImportLocal, setCanImportLocal] = useState(false);
@@ -172,6 +185,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const userId = user?.id ?? null;
   useEffect(() => {
     if (!cloud || !userId) {
+      setWorkspaces([]);
       setWorkspaceId(null);
       return;
     }
@@ -179,12 +193,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setDataLoading(true);
     (async () => {
       try {
-        const ws = await resolveWorkspaceId(userId);
+        const ws = await listWorkspaces();
         if (!active) return;
-        setWorkspaceId(ws);
-        const vids = await listVideos(ws);
+        setWorkspaces(ws);
+        let stored: string | null = null;
+        try {
+          stored = localStorage.getItem(WS_KEY);
+        } catch {
+          /* ignore */
+        }
+        const chosen = ws.find((w) => w.id === stored)?.id ?? ws[0]?.id ?? null;
+        setWorkspaceId(chosen);
+        setVideos(chosen ? await listVideos(chosen) : []);
         if (!active) return;
-        setVideos(vids);
         setCanImportLocal((readStoredVideos()?.length ?? 0) > 0);
       } catch (e) {
         reportError(e);
@@ -339,6 +360,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const switchWorkspace = (id: string) => {
+      if (id === workspaceId) return;
+      setWorkspaceId(id);
+      try {
+        localStorage.setItem(WS_KEY, id);
+      } catch {
+        /* ignore */
+      }
+      setSelectedId(null);
+      setDataLoading(true);
+      listVideos(id)
+        .then((vids) => setVideos(vids))
+        .catch(reportError)
+        .finally(() => setDataLoading(false));
+    };
+
+    const createWorkspace = async (name: string) => {
+      if (!userId) return;
+      try {
+        const ws = await apiCreateWorkspace(name, userId);
+        setWorkspaces((prev) => [...prev, ws]);
+        switchWorkspace(ws.id);
+      } catch (e) {
+        reportError(e);
+      }
+    };
+
+    const refreshWorkspaces = async () => {
+      try {
+        setWorkspaces(await listWorkspaces());
+      } catch (e) {
+        reportError(e);
+      }
+    };
+
     const importLocalData = async () => {
       if (!cloud || !workspaceId || !userId) return;
       const stored = readStoredVideos() ?? [];
@@ -362,6 +418,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cloud,
       dataLoading,
       canImportLocal,
+      workspaces,
+      currentWorkspaceId: workspaceId,
+      currentWorkspace: workspaces.find((w) => w.id === workspaceId) ?? null,
+      switchWorkspace,
+      createWorkspace,
+      refreshWorkspaces,
       view,
       device,
       search,
@@ -436,6 +498,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     cloud,
     dataLoading,
     canImportLocal,
+    workspaces,
     workspaceId,
     userId,
     view,

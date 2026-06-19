@@ -13,9 +13,11 @@ create table if not exists public.profiles (
   id          uuid primary key references auth.users (id) on delete cascade,
   full_name   text not null default 'New user',
   role        text not null default 'Creator',
+  email       text,
   avatar_url  text,
   created_at  timestamptz not null default now()
 );
+alter table public.profiles add column if not exists email text;
 
 create table if not exists public.workspaces (
   id          uuid primary key default gen_random_uuid(),
@@ -88,6 +90,37 @@ as $$
 $$;
 
 -- ---------------------------------------------------------------------------
+-- Invite by email: add an existing user straight in, else record a pending
+-- invite they claim on signup. (SECURITY DEFINER to read auth.users by email.)
+-- ---------------------------------------------------------------------------
+create or replace function public.invite_to_workspace(ws uuid, invite_email text)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid;
+begin
+  if not public.is_workspace_member(ws) then
+    raise exception 'You are not a member of this workspace';
+  end if;
+  select id into uid from auth.users where lower(email) = lower(invite_email) limit 1;
+  if uid is not null then
+    insert into public.workspace_members (workspace_id, user_id, role)
+    values (ws, uid, 'member') on conflict do nothing;
+    return 'added';
+  else
+    insert into public.workspace_invites (workspace_id, email, invited_by)
+    values (ws, lower(invite_email), auth.uid())
+    on conflict (workspace_id, email) do nothing;
+    return 'invited';
+  end if;
+end;
+$$;
+grant execute on function public.invite_to_workspace(uuid, text) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- New-user bootstrap: create a profile + a personal workspace on signup.
 -- ---------------------------------------------------------------------------
 create or replace function public.handle_new_user()
@@ -99,13 +132,14 @@ as $$
 declare
   ws_id uuid;
 begin
-  insert into public.profiles (id, full_name, role)
+  insert into public.profiles (id, full_name, role, email)
   values (
     new.id,
     coalesce(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
-    'Creator'
+    'Creator',
+    new.email
   )
-  on conflict (id) do nothing;
+  on conflict (id) do update set email = excluded.email;
 
   insert into public.workspaces (name, owner_id)
   values ('My workspace', new.id)
