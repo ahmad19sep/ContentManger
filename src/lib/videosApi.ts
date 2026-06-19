@@ -142,6 +142,40 @@ export async function removeVideo(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export interface VideoSubscriptionHandlers {
+  onUpsert: (video: Video) => void;
+  onDelete: (id: string) => void;
+}
+
+/**
+ * Subscribe to live changes on this workspace's videos. Returns an unsubscribe
+ * function. RLS + the workspace filter mean you only receive rows you can see.
+ */
+export function subscribeVideos(
+  workspaceId: string,
+  handlers: VideoSubscriptionHandlers,
+): () => void {
+  const sb = client();
+  const channel = sb
+    .channel(`videos:${workspaceId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'videos', filter: `workspace_id=eq.${workspaceId}` },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          const id = (payload.old as { id?: string })?.id;
+          if (id) handlers.onDelete(id);
+        } else {
+          handlers.onUpsert(rowToVideo(payload.new as VideoRow));
+        }
+      },
+    )
+    .subscribe();
+  return () => {
+    sb.removeChannel(channel);
+  };
+}
+
 /** Bulk insert used by the one-time "import my local videos" action. */
 export async function importVideos(
   videos: Video[],

@@ -15,6 +15,7 @@ import {
   listVideos,
   patchVideo,
   removeVideo,
+  subscribeVideos,
 } from './lib/videosApi';
 import {
   createWorkspace as apiCreateWorkspace,
@@ -87,6 +88,20 @@ function stageIndex(id: StageId): number {
 
 function reportError(e: unknown) {
   console.error('[videoflow] cloud sync error:', e);
+}
+
+// debounce per-field cloud writes (e.g. typing in notes) keyed by `field:id`
+const debouncers = new Map<string, ReturnType<typeof setTimeout>>();
+function debounce(key: string, fn: () => void, ms = 500) {
+  const existing = debouncers.get(key);
+  if (existing) clearTimeout(existing);
+  debouncers.set(
+    key,
+    setTimeout(() => {
+      debouncers.delete(key);
+      fn();
+    }, ms),
+  );
 }
 
 export interface Store {
@@ -226,6 +241,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, [cloud, userId]);
 
+  // ---- cloud: live updates from other users (and our own echoes) ----
+  useEffect(() => {
+    if (!cloud || !workspaceId) return;
+    const unsubscribe = subscribeVideos(workspaceId, {
+      onUpsert: (video) =>
+        setVideos((vs) => {
+          const i = vs.findIndex((x) => x.id === video.id);
+          if (i === -1) return [...vs, video];
+          const copy = vs.slice();
+          copy[i] = video;
+          return copy;
+        }),
+      onDelete: (id) => setVideos((vs) => vs.filter((x) => x.id !== id)),
+    });
+    return unsubscribe;
+  }, [cloud, workspaceId]);
+
   // ---- local mode: persist videos to localStorage (never persist cloud data) ----
   useEffect(() => {
     if (cloud) return;
@@ -289,12 +321,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const updateNote = (id: string, val: string) => {
       mutate(id, (v) => ({ ...v, note: val }));
-      if (cloud) patchVideo(id, { note: val }).catch(reportError);
+      if (cloud) debounce(`note:${id}`, () => patchVideo(id, { note: val }).catch(reportError));
     };
 
     const updateDrive = (id: string, val: string) => {
       mutate(id, (v) => ({ ...v, drive: val }));
-      if (cloud) patchVideo(id, { drive: val }).catch(reportError);
+      if (cloud) debounce(`drive:${id}`, () => patchVideo(id, { drive: val }).catch(reportError));
     };
 
     const updatePublish = (id: string, val: string) => {
