@@ -210,7 +210,7 @@ export function WorkspaceModal({ onClose }: { onClose: () => void }) {
               ) : isOwner ? (
                 <div>
                   <div style={{ fontSize: 12.5, color: 'var(--muted)', marginBottom: 9 }}>
-                    Auto-create a Drive folder for every new card and share it with its assignee.
+                    Auto-create a Drive folder for every new card (named with the date). Anyone with the folder link can open it.
                   </div>
                   <button
                     onClick={() => connectDrive(ws.id)}

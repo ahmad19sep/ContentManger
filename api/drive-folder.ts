@@ -113,59 +113,31 @@ export default async function handler(req: any, res: any) {
         .eq('workspace_id', video.workspace_id);
     }
 
-    // Ensure the video's folder.
+    // Ensure the video's folder. Name = "Title — YYYY-MM-DD".
     let folderId = video.drive_folder_id || '';
     let link = video.drive || '';
     if (!folderId) {
-      const folder = await createFolder(accessToken, video.title || 'Untitled', parentId);
+      const date = new Date().toISOString().slice(0, 10);
+      const folderName = `${video.title || 'Untitled'} — ${date}`;
+      const folder = await createFolder(accessToken, folderName, parentId);
       folderId = folder.id;
       link = folder.webViewLink;
       await admin.from('videos').update({ drive_folder_id: folderId, drive: link }).eq('id', videoId);
     }
 
-    // Resolve the assignee's email (the only person we share with).
-    let assigneeEmail: string | null = null;
-    if (video.assignee_id) {
-      const { data: prof } = await admin
-        .from('profiles')
-        .select('email')
-        .eq('id', video.assignee_id)
-        .maybeSingle();
-      assigneeEmail = prof?.email ?? null;
-    }
-    const ownerEmail = (wd?.google_email || '').toLowerCase();
-    const target = assigneeEmail ? assigneeEmail.toLowerCase() : null;
-
-    // Current permissions on the folder.
+    // Make the folder accessible to anyone with the link (editor).
     const permRes = await fetch(
-      `https://www.googleapis.com/drive/v3/files/${folderId}/permissions?fields=permissions(id,role,type,emailAddress)`,
+      `https://www.googleapis.com/drive/v3/files/${folderId}/permissions?fields=permissions(id,role,type)`,
       { headers: { Authorization: `Bearer ${accessToken}` } },
     );
     const permJson = await permRes.json();
-    const perms: { id: string; type: string; emailAddress?: string }[] = permJson.permissions || [];
-
-    // Revoke any user (besides the owner) who isn't the current assignee.
-    for (const p of perms) {
-      if (p.type !== 'user') continue;
-      const e = (p.emailAddress || '').toLowerCase();
-      if (e === ownerEmail) continue;
-      if (target && e === target) continue;
-      await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}/permissions/${p.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${accessToken}` },
+    const perms: { id: string; type: string; role?: string }[] = permJson.permissions || [];
+    if (!perms.some((p) => p.type === 'anyone')) {
+      await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}/permissions`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'writer', type: 'anyone' }),
       });
-    }
-
-    // Grant the current assignee writer access (if not already present).
-    if (target && !perms.some((p) => (p.emailAddress || '').toLowerCase() === target)) {
-      await fetch(
-        `https://www.googleapis.com/drive/v3/files/${folderId}/permissions?sendNotificationEmail=false`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: 'writer', type: 'user', emailAddress: target }),
-        },
-      );
     }
 
     return res.status(200).json({ link, folderId });

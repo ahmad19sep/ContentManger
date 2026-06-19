@@ -337,11 +337,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const updateAssignee = (id: string, assigneeId: string | null) => {
       mutate(id, (v) => ({ ...v, assigneeId }));
-      if (cloud) {
-        patchVideo(id, { assigneeId })
-          .then(() => syncVideoFolder(id))
-          .catch(reportError);
-      }
+      if (cloud) patchVideo(id, { assigneeId }).catch(reportError);
     };
 
     const deleteVideo = (id: string) => {
