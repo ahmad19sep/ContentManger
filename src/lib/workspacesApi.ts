@@ -117,8 +117,8 @@ export async function listInvites(workspaceId: string): Promise<Invite[]> {
   }));
 }
 
-/** Returns 'added' (existing user joined) or 'invited' (pending invite created). */
-export async function inviteByEmail(
+/** Pending-invite/add via the DB function (no email sent). */
+async function inviteViaRpc(
   workspaceId: string,
   email: string,
 ): Promise<'added' | 'invited'> {
@@ -129,6 +129,52 @@ export async function inviteByEmail(
   });
   if (error) throw error;
   return data as 'added' | 'invited';
+}
+
+/**
+ * Invite a teammate. Tries the serverless function (which sends a real email);
+ * if that endpoint isn't deployed/configured yet, falls back to the no-email
+ * DB path so invites still work.
+ * Returns 'added' (existing user joined) or 'invited' (email sent / pending).
+ */
+export async function inviteByEmail(
+  workspaceId: string,
+  email: string,
+): Promise<'added' | 'invited'> {
+  const sb = client();
+  const {
+    data: { session },
+  } = await sb.auth.getSession();
+  const token = session?.access_token;
+
+  try {
+    const res = await fetch('/api/invite', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        workspaceId,
+        email: email.trim(),
+        redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+      }),
+    });
+
+    // 501 = server not configured (no service key) / 404 = function not deployed.
+    if (res.status === 501 || res.status === 404) {
+      return inviteViaRpc(workspaceId, email);
+    }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || 'Could not send the invite.');
+    return json.status as 'added' | 'invited';
+  } catch (e) {
+    // Network error or non-JSON (e.g. dev server has no /api): fall back.
+    if (e instanceof Error && /Could not send the invite|not a member|workspaceId/i.test(e.message)) {
+      throw e;
+    }
+    return inviteViaRpc(workspaceId, email);
+  }
 }
 
 export async function revokeInvite(id: string): Promise<void> {
