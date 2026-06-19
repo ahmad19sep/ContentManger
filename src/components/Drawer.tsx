@@ -1,6 +1,7 @@
 import { CHECK, STAGES } from '../constants';
 import { stageIndex, stageObj, videoMeta } from '../display';
 import { useStore } from '../store';
+import { CommentsSection } from './CommentsSection';
 import { Avatar, Dot, Hover } from './ui';
 
 export function Drawer() {
@@ -214,6 +215,12 @@ export function Drawer() {
             placeholder="Add production notes…"
             style={{ width: '100%', minHeight: 84, resize: 'vertical', border: '1px solid var(--line)', borderRadius: 10, padding: '11px 12px', fontSize: 13, lineHeight: 1.5, color: 'var(--ink)', background: 'var(--canvas)', outline: 'none' }}
           />
+
+          {s.cloud && (
+            <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
+              <CommentsSection videoId={v.id} />
+            </div>
+          )}
 
           <div style={{ marginTop: 22, paddingTop: 18, borderTop: '1px solid var(--line)' }}>
             <Hover

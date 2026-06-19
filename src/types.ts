@@ -55,6 +55,15 @@ export interface Video {
   assigneeId?: string | null;
 }
 
+export interface Comment {
+  id: string;
+  videoId: string;
+  authorId: string;
+  body: string;
+  /** ISO timestamp */
+  createdAt: string;
+}
+
 export interface VideoForm {
   title: string;
   platform: PlatformId;
