@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../auth';
 import { ACCENT_OPTIONS } from '../constants';
 import { useStore } from '../store';
 import type { ViewId } from '../types';
@@ -27,6 +28,7 @@ function seg(active: boolean): React.CSSProperties {
 
 function SettingsMenu() {
   const s = useStore();
+  const { cloud, user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -122,27 +124,46 @@ function SettingsMenu() {
             <input type="checkbox" checked={s.settings.weekStartsMonday} onChange={s.toggleWeekStart} style={{ cursor: 'pointer' }} />
           </label>
 
-          <button
-            onClick={() => {
-              if (confirm('Reset all videos to the sample data? This clears your changes.')) {
-                s.resetData();
-                setOpen(false);
-              }
-            }}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              border: '1px solid var(--line)',
-              background: 'var(--canvas)',
-              borderRadius: 8,
-              fontSize: 12.5,
-              fontWeight: 600,
-              color: '#E5594D',
-              cursor: 'pointer',
-            }}
-          >
-            Reset sample data
-          </button>
+          {!cloud && (
+            <button
+              onClick={() => {
+                if (confirm('Reset all videos to the sample data? This clears your changes.')) {
+                  s.resetData();
+                  setOpen(false);
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                border: '1px solid var(--line)',
+                background: 'var(--canvas)',
+                borderRadius: 8,
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: '#E5594D',
+                cursor: 'pointer',
+              }}
+            >
+              Reset sample data
+            </button>
+          )}
+
+          {cloud && (
+            <div style={{ borderTop: '1px solid var(--line)', marginTop: 4, paddingTop: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
+                Account
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 9 }}>
+                {user?.email}
+              </div>
+              <button
+                onClick={() => signOut()}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--line)', background: 'var(--canvas)', borderRadius: 8, fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', cursor: 'pointer' }}
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

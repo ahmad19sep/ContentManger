@@ -1,12 +1,16 @@
+import { useAuth } from './auth';
+import { AuthScreen } from './components/AuthScreen';
 import { Calendar } from './components/Calendar';
 import { Dashboard } from './components/Dashboard';
 import { Drawer } from './components/Drawer';
 import { Ideas } from './components/Ideas';
+import { ImportBanner } from './components/ImportBanner';
 import { MobileNav } from './components/MobileNav';
 import { NewVideoModal } from './components/NewVideoModal';
 import { Pipeline } from './components/Pipeline';
 import { Sidebar } from './components/Sidebar';
 import { Topbar } from './components/Topbar';
+import { isSupabaseConfigured } from './lib/supabase';
 import { useStore } from './store';
 
 function ViewContent() {
@@ -23,7 +27,15 @@ function ViewContent() {
   }
 }
 
-export default function App() {
+function Splash() {
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--canvas)', color: 'var(--muted)', fontSize: 14 }}>
+      Loading…
+    </div>
+  );
+}
+
+function AppShell() {
   const s = useStore();
   const isMobile = s.device === 'mobile';
 
@@ -56,6 +68,7 @@ export default function App() {
         <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: 'var(--canvas)' }}>
           <Topbar />
           <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+            <ImportBanner />
             <ViewContent />
           </div>
         </main>
@@ -67,4 +80,12 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+export default function App() {
+  const { loading, cloud } = useAuth();
+
+  if (loading) return <Splash />;
+  if (isSupabaseConfigured && !cloud) return <AuthScreen />;
+  return <AppShell />;
 }

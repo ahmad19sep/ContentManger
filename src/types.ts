@@ -51,6 +51,8 @@ export interface Video {
   drive?: string;
   /** keyed by `${stageId}:${index}` -> done */
   checks: Record<string, boolean>;
+  /** user id of the assignee, or null/undefined when unassigned (cloud mode) */
+  assigneeId?: string | null;
 }
 
 export interface VideoForm {

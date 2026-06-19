@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import App from './App';
+import { AuthProvider } from './auth';
 import { StoreProvider } from './store';
 
 afterEach(() => {
@@ -10,9 +11,11 @@ afterEach(() => {
 
 function renderApp() {
   return render(
-    <StoreProvider>
-      <App />
-    </StoreProvider>,
+    <AuthProvider>
+      <StoreProvider>
+        <App />
+      </StoreProvider>
+    </AuthProvider>,
   );
 }
 

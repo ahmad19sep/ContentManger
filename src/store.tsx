@@ -6,8 +6,17 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useAuth } from './auth';
 import { STAGES } from './constants';
 import { ymd } from './dates';
+import {
+  importVideos,
+  insertVideo,
+  listVideos,
+  patchVideo,
+  removeVideo,
+  resolveWorkspaceId,
+} from './lib/videosApi';
 import { SEED_VIDEOS } from './seed';
 import type {
   DeviceId,
@@ -37,7 +46,8 @@ const DEFAULT_SETTINGS: Settings = {
   sidebarCollapsed: false,
 };
 
-function loadVideos(): Video[] {
+/** Stored local videos, or null if the user has never saved any locally. */
+function readStoredVideos(): Video[] | null {
   try {
     const raw = localStorage.getItem(VIDEOS_KEY);
     if (raw) {
@@ -47,7 +57,11 @@ function loadVideos(): Video[] {
   } catch {
     /* ignore corrupt storage */
   }
-  return SEED_VIDEOS;
+  return null;
+}
+
+function loadVideos(): Video[] {
+  return readStoredVideos() ?? SEED_VIDEOS;
 }
 
 function loadSettings(): Settings {
@@ -64,10 +78,18 @@ function stageIndex(id: StageId): number {
   return STAGES.findIndex((s) => s.id === id);
 }
 
+function reportError(e: unknown) {
+  console.error('[videoflow] cloud sync error:', e);
+}
+
 export interface Store {
-  // persisted data
+  // data
   videos: Video[];
   settings: Settings;
+  // mode
+  cloud: boolean;
+  dataLoading: boolean;
+  canImportLocal: boolean;
   // ephemeral UI state
   view: ViewId;
   device: DeviceId;
@@ -101,6 +123,7 @@ export interface Store {
   setUserRole: (role: string) => void;
   toggleSidebar: () => void;
   resetData: () => void;
+  importLocalData: () => Promise<void>;
   // mutations
   setStage: (id: string, stageId: StageId) => void;
   moveStage: (id: string, dir: -1 | 1) => void;
@@ -118,8 +141,13 @@ export interface Store {
 const StoreContext = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const { cloud, user } = useAuth();
+
   const [videos, setVideos] = useState<Video[]>(loadVideos);
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [canImportLocal, setCanImportLocal] = useState(false);
 
   const [view, setView] = useState<ViewId>('dashboard');
   const [device, setDevice] = useState<DeviceId>('desktop');
@@ -140,14 +168,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     due: '2026-06-26',
   });
 
-  // persist
+  // ---- cloud: load videos for the signed-in user's workspace ----
+  const userId = user?.id ?? null;
   useEffect(() => {
+    if (!cloud || !userId) {
+      setWorkspaceId(null);
+      return;
+    }
+    let active = true;
+    setDataLoading(true);
+    (async () => {
+      try {
+        const ws = await resolveWorkspaceId(userId);
+        if (!active) return;
+        setWorkspaceId(ws);
+        const vids = await listVideos(ws);
+        if (!active) return;
+        setVideos(vids);
+        setCanImportLocal((readStoredVideos()?.length ?? 0) > 0);
+      } catch (e) {
+        reportError(e);
+      } finally {
+        if (active) setDataLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [cloud, userId]);
+
+  // ---- local mode: persist videos to localStorage (never persist cloud data) ----
+  useEffect(() => {
+    if (cloud) return;
     try {
       localStorage.setItem(VIDEOS_KEY, JSON.stringify(videos));
     } catch {
       /* ignore quota */
     }
-  }, [videos]);
+  }, [videos, cloud]);
 
   useEffect(() => {
     try {
@@ -157,7 +215,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [settings]);
 
-  // apply accent to CSS variable
   useEffect(() => {
     document.documentElement.style.setProperty('--accent', settings.accentColor);
   }, [settings.accentColor]);
@@ -166,40 +223,60 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const setForm = (patch: Partial<VideoForm>) =>
       setFormState((f) => ({ ...f, ...patch }));
 
-    const setStage = (id: string, stageId: StageId) =>
-      setVideos((vs) => vs.map((v) => (v.id === id ? { ...v, stage: stageId } : v)));
-
-    const moveStage = (id: string, dir: -1 | 1) =>
+    // optimistic local update + (in cloud mode) a DB write
+    const mutate = (id: string, transform: (v: Video) => Video) => {
+      let next: Video | undefined;
       setVideos((vs) =>
         vs.map((v) => {
           if (v.id !== id) return v;
-          const i = stageIndex(v.stage);
-          const ni = Math.max(0, Math.min(STAGES.length - 1, i + dir));
-          return { ...v, stage: STAGES[ni].id };
+          next = transform(v);
+          return next;
         }),
       );
+      return next;
+    };
 
-    const toggleCheck = (id: string, key: string) =>
-      setVideos((vs) =>
-        vs.map((v) => {
-          if (v.id !== id) return v;
-          const checks = { ...v.checks, [key]: !v.checks[key] };
-          return { ...v, checks };
-        }),
-      );
+    const setStage = (id: string, stageId: StageId) => {
+      mutate(id, (v) => ({ ...v, stage: stageId }));
+      if (cloud) patchVideo(id, { stage: stageId }).catch(reportError);
+    };
 
-    const updateNote = (id: string, val: string) =>
-      setVideos((vs) => vs.map((v) => (v.id === id ? { ...v, note: val } : v)));
+    const moveStage = (id: string, dir: -1 | 1) => {
+      const updated = mutate(id, (v) => {
+        const i = stageIndex(v.stage);
+        const ni = Math.max(0, Math.min(STAGES.length - 1, i + dir));
+        return { ...v, stage: STAGES[ni].id };
+      });
+      if (cloud && updated) patchVideo(id, { stage: updated.stage }).catch(reportError);
+    };
 
-    const updateDrive = (id: string, val: string) =>
-      setVideos((vs) => vs.map((v) => (v.id === id ? { ...v, drive: val } : v)));
+    const toggleCheck = (id: string, key: string) => {
+      const updated = mutate(id, (v) => ({
+        ...v,
+        checks: { ...v.checks, [key]: !v.checks[key] },
+      }));
+      if (cloud && updated) patchVideo(id, { checks: updated.checks }).catch(reportError);
+    };
 
-    const updatePublish = (id: string, val: string) =>
-      setVideos((vs) => vs.map((v) => (v.id === id ? { ...v, publish: val } : v)));
+    const updateNote = (id: string, val: string) => {
+      mutate(id, (v) => ({ ...v, note: val }));
+      if (cloud) patchVideo(id, { note: val }).catch(reportError);
+    };
+
+    const updateDrive = (id: string, val: string) => {
+      mutate(id, (v) => ({ ...v, drive: val }));
+      if (cloud) patchVideo(id, { drive: val }).catch(reportError);
+    };
+
+    const updatePublish = (id: string, val: string) => {
+      mutate(id, (v) => ({ ...v, publish: val }));
+      if (cloud) patchVideo(id, { publish: val }).catch(reportError);
+    };
 
     const deleteVideo = (id: string) => {
       setVideos((vs) => vs.filter((v) => v.id !== id));
       setSelectedId((cur) => (cur === id ? null : cur));
+      if (cloud) removeVideo(id).catch(reportError);
     };
 
     const openModal = (stage?: StageId) => {
@@ -209,50 +286,82 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     const closeModal = () => setModalOpen(false);
 
+    const finishCreate = () => {
+      setFormState((f) => ({ ...f, title: '' }));
+      setModalOpen(false);
+      setView('pipeline');
+    };
+
     const saveVideo = () => {
-      setFormState((f) => {
-        if (!f.title.trim()) return f;
-        const nv: Video = {
-          id: 'v' + Date.now(),
-          title: f.title.trim(),
-          platform: f.platform,
-          stage: f.stage,
-          priority: f.priority,
-          due: f.due,
-          publish: '',
-          note: '',
-          checks: {},
-        };
-        setVideos((vs) => [...vs, nv]);
-        setModalOpen(false);
-        setView('pipeline');
-        return { ...f, title: '' };
-      });
+      if (!form.title.trim()) return;
+      const base: Omit<Video, 'id'> = {
+        title: form.title.trim(),
+        platform: form.platform,
+        stage: form.stage,
+        priority: form.priority,
+        due: form.due,
+        publish: '',
+        note: '',
+        checks: {},
+      };
+      if (cloud && workspaceId && userId) {
+        insertVideo(base, workspaceId, userId)
+          .then((nv) => setVideos((vs) => [...vs, nv]))
+          .catch(reportError);
+        finishCreate();
+      } else {
+        setVideos((vs) => [...vs, { id: 'v' + Date.now(), ...base }]);
+        finishCreate();
+      }
     };
 
     const addIdea = () => {
-      setIdeaDraft((draft) => {
-        const t = draft.trim();
-        if (!t) return draft;
-        const nv: Video = {
-          id: 'v' + Date.now(),
-          title: t,
-          platform: 'yt',
-          stage: 'idea',
-          priority: 'low',
-          due: ymd(new Date(2026, 6, 1)),
-          publish: '',
-          note: 'New idea — develop the angle.',
-          checks: {},
-        };
-        setVideos((vs) => [...vs, nv]);
-        return '';
-      });
+      const t = ideaDraft.trim();
+      if (!t) return;
+      const base: Omit<Video, 'id'> = {
+        title: t,
+        platform: 'yt',
+        stage: 'idea',
+        priority: 'low',
+        due: ymd(new Date(2026, 6, 1)),
+        publish: '',
+        note: 'New idea — develop the angle.',
+        checks: {},
+      };
+      if (cloud && workspaceId && userId) {
+        insertVideo(base, workspaceId, userId)
+          .then((nv) => setVideos((vs) => [...vs, nv]))
+          .catch(reportError);
+        setIdeaDraft('');
+      } else {
+        setVideos((vs) => [...vs, { id: 'v' + Date.now(), ...base }]);
+        setIdeaDraft('');
+      }
+    };
+
+    const importLocalData = async () => {
+      if (!cloud || !workspaceId || !userId) return;
+      const stored = readStoredVideos() ?? [];
+      if (stored.length === 0) {
+        setCanImportLocal(false);
+        return;
+      }
+      try {
+        const imported = await importVideos(stored, workspaceId, userId);
+        setVideos((vs) => [...vs, ...imported]);
+        localStorage.removeItem(VIDEOS_KEY);
+        setCanImportLocal(false);
+      } catch (e) {
+        reportError(e);
+      }
     };
 
     return {
       videos,
       settings,
+      cloud,
+      dataLoading,
+      canImportLocal,
       view,
       device,
       search,
@@ -305,7 +414,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setUserRole: (role) => setSettings((s) => ({ ...s, userRole: role })),
       toggleSidebar: () =>
         setSettings((s) => ({ ...s, sidebarCollapsed: !s.sidebarCollapsed })),
-      resetData: () => setVideos(SEED_VIDEOS),
+      resetData: () => {
+        if (!cloud) setVideos(SEED_VIDEOS);
+      },
+      importLocalData,
       setStage,
       moveStage,
       toggleCheck,
@@ -321,6 +433,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [
     videos,
     settings,
+    cloud,
+    dataLoading,
+    canImportLocal,
+    workspaceId,
+    userId,
     view,
     device,
     search,
