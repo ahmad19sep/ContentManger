@@ -69,6 +69,6 @@ export const MS = [
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
 
-export const ACCENT_OPTIONS = ['#5B5BD6', '#E5594D', '#1F9D57', '#2E8FE0'];
+export const ACCENT_OPTIONS = ['#6C5CE7', '#E5594D', '#1F9D57', '#2E8FE0'];
 
 export const PLATFORM_IDS = Object.keys(PLAT) as PlatformId[];

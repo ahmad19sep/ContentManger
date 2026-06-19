@@ -47,7 +47,7 @@ interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  accentColor: '#5B5BD6',
+  accentColor: '#6C5CE7',
   weekStartsMonday: false,
   userName: 'Alex Rivera',
   userRole: 'Solo creator',

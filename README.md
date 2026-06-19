@@ -1,7 +1,7 @@
-# VideoFlow
+# Caira
 
-A content pipeline manager for solo video creators. Plan, track, and ship videos
-across every platform from one board.
+A content pipeline manager for video creators and teams. Plan, track, and ship
+videos across every platform from one board.
 
 Built with React + TypeScript + Vite. All data lives in the browser
 (`localStorage`) — no backend required.

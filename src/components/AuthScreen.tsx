@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { LogoMark, Wordmark } from './Logo';
 
 type Mode = 'signin' | 'signup' | 'magic';
 
@@ -160,12 +161,10 @@ export function AuthScreen() {
           animation: 'fadeUp .25s ease',
         }}
       >
-        <div style={{ padding: '26px 26px 6px', display: 'flex', alignItems: 'center', gap: 11 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 17 }}>
-            V
-          </div>
+        <div style={{ padding: '26px 26px 6px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <LogoMark size={36} />
           <div>
-            <div style={{ fontWeight: 700, fontSize: 18, letterSpacing: '-0.02em' }}>VideoFlow</div>
+            <Wordmark size={20} />
             <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>Your content pipeline, everywhere.</div>
           </div>
         </div>

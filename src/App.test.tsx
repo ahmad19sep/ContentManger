@@ -21,7 +21,7 @@ function renderApp() {
 
 test('mounts on the dashboard with seeded stats and up-next list', () => {
   renderApp();
-  expect(screen.getByText('VideoFlow')).toBeTruthy();
+  expect(screen.getByText('Caira')).toBeTruthy();
   expect(screen.getByText('In production')).toBeTruthy();
   expect(screen.getAllByText('How I Plan 30 Videos in a Weekend').length).toBeGreaterThan(0);
 });
@@ -82,11 +82,11 @@ test('capturing an idea adds it to the Ideas view', () => {
 
 test('the sidebar can be collapsed and reopened', () => {
   renderApp();
-  expect(screen.getByText('VideoFlow')).toBeTruthy(); // sidebar present
+  expect(screen.getByText('Caira')).toBeTruthy(); // sidebar present
   fireEvent.click(screen.getByTitle('Collapse sidebar'));
-  expect(screen.queryByText('VideoFlow')).toBeNull(); // sidebar gone
+  expect(screen.queryByText('Caira')).toBeNull(); // sidebar gone
   fireEvent.click(screen.getByTitle('Open sidebar'));
-  expect(screen.getByText('VideoFlow')).toBeTruthy(); // back
+  expect(screen.getByText('Caira')).toBeTruthy(); // back
 });
 
 test('the profile name can be edited in settings and shows in the sidebar', () => {

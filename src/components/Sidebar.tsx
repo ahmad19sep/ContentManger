@@ -2,6 +2,7 @@ import { useAuth } from '../auth';
 import { PLAT, PLATFORM_IDS } from '../constants';
 import { useStore } from '../store';
 import type { ViewId } from '../types';
+import { LogoMark, Wordmark } from './Logo';
 import { Dot, Hover } from './ui';
 import { WorkspaceBar } from './WorkspaceBar';
 
@@ -114,23 +115,8 @@ export function Sidebar() {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px 16px' }}>
-        <div
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 9,
-            background: 'var(--accent)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: 15,
-          }}
-        >
-          V
-        </div>
-        <div style={{ fontWeight: 700, fontSize: 15.5, letterSpacing: '-0.02em' }}>VideoFlow</div>
+        <LogoMark size={30} />
+        <Wordmark size={17} />
         <Hover
           as="button"
           onClick={s.toggleSidebar}
