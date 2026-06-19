@@ -14,6 +14,7 @@ function appOrigin(req: any): string {
 export default async function handler(req: any, res: any) {
   const origin = appOrigin(req);
   const fail = (msg: string) => {
+    console.log('[drive-callback] FAIL:', msg);
     res.writeHead(302, { Location: `${origin}/?drive=error&msg=${encodeURIComponent(msg)}` });
     res.end();
   };
@@ -94,6 +95,7 @@ export default async function handler(req: any, res: any) {
         updated_at: new Date().toISOString(),
       });
 
+    console.log('[drive-callback] CONNECTED workspace=', workspaceId, 'email=', email);
     res.writeHead(302, { Location: `${origin}/?drive=connected` });
     res.end();
   } catch (e) {

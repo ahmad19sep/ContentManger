@@ -85,11 +85,17 @@ export default async function handler(req: any, res: any) {
     .select('refresh_token')
     .eq('workspace_id', video.workspace_id)
     .maybeSingle();
-  if (!conn) return res.status(200).json({ skipped: 'drive_not_connected' });
+  if (!conn) {
+    console.log('[drive-folder] skipped: drive_not_connected, ws=', video.workspace_id);
+    return res.status(200).json({ skipped: 'drive_not_connected' });
+  }
 
   try {
     const accessToken = await getAccessToken(conn.refresh_token);
-    if (!accessToken) return res.status(200).json({ skipped: 'token_refresh_failed' });
+    if (!accessToken) {
+      console.log('[drive-folder] skipped: token_refresh_failed');
+      return res.status(200).json({ skipped: 'token_refresh_failed' });
+    }
 
     // Ensure a parent folder for the workspace.
     const { data: wd } = await admin
@@ -140,8 +146,11 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    console.log('[drive-folder] OK folder=', folderId);
     return res.status(200).json({ link, folderId });
   } catch (e) {
-    return res.status(200).json({ skipped: 'error', message: e instanceof Error ? e.message : 'unknown' });
+    const message = e instanceof Error ? e.message : 'unknown';
+    console.log('[drive-folder] ERROR:', message);
+    return res.status(200).json({ skipped: 'error', message });
   }
 }
