@@ -25,6 +25,26 @@ const label: React.CSSProperties = {
 const redirectTo =
   typeof window !== 'undefined' ? window.location.origin : undefined;
 
+/** Reject if a promise doesn't settle in time, so the UI never hangs forever. */
+function withTimeout<T>(p: PromiseLike<T>, ms = 15000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(
+      () => reject(new Error('The server took too long to respond. Check your connection and try again.')),
+      ms,
+    );
+    Promise.resolve(p).then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
+}
+
 export function AuthScreen() {
   const [mode, setMode] = useState<Mode>('signin');
   const [name, setName] = useState('');
@@ -46,28 +66,34 @@ export function AuthScreen() {
     setBusy(true);
     try {
       if (mode === 'magic') {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: { emailRedirectTo: redirectTo },
-        });
+        const { error } = await withTimeout(
+          supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } }),
+        );
         if (error) throw error;
-        setNotice('Check your email for a magic sign-in link.');
+        setNotice('Check your email (and spam) for a magic sign-in link.');
       } else if (mode === 'signup') {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: { full_name: name.trim() || undefined }, emailRedirectTo: redirectTo },
-        });
+        const { data, error } = await withTimeout(
+          supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { full_name: name.trim() || undefined }, emailRedirectTo: redirectTo },
+          }),
+        );
         if (error) throw error;
         if (!data.session) {
-          setNotice('Account created. Check your email to confirm, then sign in.');
+          setNotice('Account created. Check your email (and spam) to confirm, then sign in.');
           setMode('signin');
         }
+        // if a session came back (email confirmation disabled), the auth
+        // listener will swap to the app automatically.
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await withTimeout(
+          supabase.auth.signInWithPassword({ email, password }),
+        );
         if (error) throw error;
       }
     } catch (err) {
+      console.error('[auth]', err);
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setBusy(false);
