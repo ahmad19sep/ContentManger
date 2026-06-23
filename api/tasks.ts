@@ -37,7 +37,9 @@ export default async function handler(req: any, res: any) {
     .maybeSingle();
   if (dup) return res.status(200).json({ status: 'duplicate', id: dup.id });
 
-  // Resolve assignee (email) -> member user id; null = unassigned.
+  // Resolve assignee. If AI Radar gave an email, honor it. Otherwise (the normal
+  // case) AUTO-ASSIGN to the workspace member with the fewest open tasks — this is
+  // what makes it scale to any number of workers with zero config on Radar's side.
   let assigneeId: string | null = null;
   if (b.assignee) {
     const { data: prof } = await admin
@@ -46,6 +48,26 @@ export default async function handler(req: any, res: any) {
       .ilike('email', String(b.assignee))
       .maybeSingle();
     assigneeId = prof?.id ?? null;
+  }
+  if (!assigneeId) {
+    const { data: members } = await admin
+      .from('workspace_members')
+      .select('user_id')
+      .eq('workspace_id', ws);
+    const memberIds = (members as { user_id: string }[] | null)?.map((m) => m.user_id) ?? [];
+    if (memberIds.length) {
+      const load: Record<string, number> = {};
+      for (const id of memberIds) load[id] = 0;
+      const { data: open } = await admin
+        .from('videos')
+        .select('assignee_id')
+        .eq('workspace_id', ws)
+        .neq('stage', 'publish');
+      for (const o of (open as { assignee_id: string | null }[]) || []) {
+        if (o.assignee_id && load[o.assignee_id] !== undefined) load[o.assignee_id]++;
+      }
+      assigneeId = memberIds.sort((a, c) => load[a] - load[c])[0] ?? null;
+    }
   }
 
   const score = typeof b.score === 'number' ? b.score : null;
