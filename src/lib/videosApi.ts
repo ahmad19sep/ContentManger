@@ -15,6 +15,25 @@ interface VideoRow {
   checks: Record<string, boolean> | null;
   assignee_id: string | null;
   created_by: string | null;
+  // post fields (may be absent on older rows)
+  kind?: string | null;
+  master_prompt?: string | null;
+  source_url?: string | null;
+  news_source?: string | null;
+  category?: string | null;
+  news_score?: number | null;
+  approved?: boolean | null;
+  headline?: string | null;
+  article?: string | null;
+  x_post?: string | null;
+  linkedin_post?: string | null;
+  facebook_post?: string | null;
+  instagram_caption?: string | null;
+  whatsapp_post?: string | null;
+  youtube_short_script?: string | null;
+  image_prompt?: string | null;
+  fact_check_notes?: string | null;
+  risk_level?: string | null;
 }
 
 function rowToVideo(r: VideoRow): Video {
@@ -30,6 +49,24 @@ function rowToVideo(r: VideoRow): Video {
     drive: r.drive ?? undefined,
     checks: r.checks ?? {},
     assigneeId: r.assignee_id ?? null,
+    kind: (r.kind as 'video' | 'post') ?? 'video',
+    masterPrompt: r.master_prompt ?? undefined,
+    sourceUrl: r.source_url ?? undefined,
+    newsSource: r.news_source ?? undefined,
+    category: r.category ?? undefined,
+    newsScore: r.news_score ?? null,
+    approved: r.approved ?? false,
+    headline: r.headline ?? undefined,
+    article: r.article ?? undefined,
+    xPost: r.x_post ?? undefined,
+    linkedinPost: r.linkedin_post ?? undefined,
+    facebookPost: r.facebook_post ?? undefined,
+    instagramCaption: r.instagram_caption ?? undefined,
+    whatsappPost: r.whatsapp_post ?? undefined,
+    youtubeShortScript: r.youtube_short_script ?? undefined,
+    imagePrompt: r.image_prompt ?? undefined,
+    factCheckNotes: r.fact_check_notes ?? undefined,
+    riskLevel: r.risk_level ?? undefined,
   };
 }
 
@@ -139,6 +176,54 @@ export async function patchVideo(id: string, patch: VideoPatch): Promise<void> {
 export async function removeVideo(id: string): Promise<void> {
   const sb = client();
   const { error } = await sb.from('videos').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** Save the parsed AI output onto a post card and move it to Review. */
+export async function savePostOutput(
+  id: string,
+  p: {
+    headline?: string;
+    article?: string;
+    xPost?: string;
+    linkedinPost?: string;
+    facebookPost?: string;
+    instagramCaption?: string;
+    whatsappPost?: string;
+    youtubeShortScript?: string;
+    imagePrompt?: string;
+    factCheckNotes?: string;
+    riskLevel?: string;
+  },
+): Promise<void> {
+  const sb = client();
+  const { error } = await sb
+    .from('videos')
+    .update({
+      headline: p.headline ?? null,
+      article: p.article ?? null,
+      x_post: p.xPost ?? null,
+      linkedin_post: p.linkedinPost ?? null,
+      facebook_post: p.facebookPost ?? null,
+      instagram_caption: p.instagramCaption ?? null,
+      whatsapp_post: p.whatsappPost ?? null,
+      youtube_short_script: p.youtubeShortScript ?? null,
+      image_prompt: p.imagePrompt ?? null,
+      fact_check_notes: p.factCheckNotes ?? null,
+      risk_level: p.riskLevel ?? null,
+      stage: 'review',
+    })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+/** Owner approval — flags the post so /api/ready hands it back to AI Radar. */
+export async function setApproved(id: string, approved: boolean): Promise<void> {
+  const sb = client();
+  const { error } = await sb
+    .from('videos')
+    .update(approved ? { approved: true, stage: 'publish' } : { approved: false })
+    .eq('id', id);
   if (error) throw error;
 }
 

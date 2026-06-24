@@ -3,6 +3,7 @@ import { CHECK, STAGES } from '../constants';
 import { stageIndex, stageObj, videoMeta } from '../display';
 import { useStore } from '../store';
 import { CommentsSection } from './CommentsSection';
+import { PostCardSection } from './PostCardSection';
 import { Avatar, Dot, Hover } from './ui';
 
 export function Drawer() {
@@ -64,6 +65,10 @@ export function Drawer() {
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '18px 20px 24px' }}>
+          {v.kind === 'post' && (
+            <PostCardSection v={v} isOwner={s.currentWorkspace?.role === 'owner'} />
+          )}
+
           <SectionLabel>Workflow stage</SectionLabel>
           <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
             {STAGES.map((stg, i) => (

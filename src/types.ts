@@ -53,6 +53,27 @@ export interface Video {
   checks: Record<string, boolean>;
   /** user id of the assignee, or null/undefined when unassigned (cloud mode) */
   assigneeId?: string | null;
+
+  // ----- AI Radar "post" cards (kind === 'post') -----
+  kind?: 'video' | 'post';
+  masterPrompt?: string;
+  sourceUrl?: string;
+  newsSource?: string;
+  category?: string;
+  newsScore?: number | null;
+  approved?: boolean;
+  // parsed AI output:
+  headline?: string;
+  article?: string;
+  xPost?: string;
+  linkedinPost?: string;
+  facebookPost?: string;
+  instagramCaption?: string;
+  whatsappPost?: string;
+  youtubeShortScript?: string;
+  imagePrompt?: string;
+  factCheckNotes?: string;
+  riskLevel?: string;
 }
 
 export interface Comment {

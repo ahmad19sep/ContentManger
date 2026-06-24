@@ -15,8 +15,11 @@ import {
   listVideos,
   patchVideo,
   removeVideo,
+  savePostOutput,
+  setApproved,
   subscribeVideos,
 } from './lib/videosApi';
+import { parsePostOutput } from './lib/parsePostOutput';
 import {
   createWorkspace as apiCreateWorkspace,
   listMembers,
@@ -165,6 +168,8 @@ export interface Store {
   updatePublish: (id: string, val: string) => void;
   updateAssignee: (id: string, userId: string | null) => void;
   createDriveFolder: (id: string) => Promise<string | null>;
+  submitPostOutput: (id: string, raw: string) => void;
+  approvePost: (id: string, approved: boolean) => void;
   deleteVideo: (id: string) => void;
   openModal: (stage?: StageId) => void;
   closeModal: () => void;
@@ -345,6 +350,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const link = await syncVideoFolder(id);
       if (link) mutate(id, (v) => ({ ...v, drive: link }));
       return link;
+    };
+
+    const submitPostOutput = (id: string, raw: string) => {
+      const parsed = parsePostOutput(raw);
+      mutate(id, (v) => ({ ...v, ...parsed, stage: 'review' }));
+      if (cloud) savePostOutput(id, parsed).catch(reportError);
+    };
+
+    const approvePost = (id: string, approved: boolean) => {
+      mutate(id, (v) => ({ ...v, approved, ...(approved ? { stage: 'publish' as const } : {}) }));
+      if (cloud) setApproved(id, approved).catch(reportError);
     };
 
     const deleteVideo = (id: string) => {
@@ -561,6 +577,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updatePublish,
       updateAssignee,
       createDriveFolder,
+      submitPostOutput,
+      approvePost,
       deleteVideo,
       openModal,
       closeModal,

@@ -63,10 +63,16 @@ function Card({ video, stage }: { video: Video; stage: Stage }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: '#54545c' }}>
-          <Dot color={m.platformColor} size={7} />
-          {m.platformLabel}
-        </span>
+        {video.kind === 'post' ? (
+          <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: 'var(--accent)', borderRadius: 4, padding: '2px 6px', letterSpacing: '0.04em' }}>
+            NEWS POST
+          </span>
+        ) : (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: '#54545c' }}>
+            <Dot color={m.platformColor} size={7} />
+            {m.platformLabel}
+          </span>
+        )}
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, fontWeight: 600, color: '#8A8A92' }}>
           <Dot color={m.priorityColor} size={7} />
           {m.priorityLabel}
