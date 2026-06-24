@@ -41,7 +41,6 @@ export default async function handler(req: any, res: any) {
   }
   const workspaceId: string | undefined = body?.workspaceId;
   const email: string = (body?.email || '').trim().toLowerCase();
-  const redirectTo: string | undefined = body?.redirectTo;
   if (!workspaceId || !email) {
     res.status(400).json({ error: 'workspaceId and email are required' });
     return;
@@ -88,23 +87,15 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  // 3. New email: record the pending invite (so the signup trigger auto-joins
-  //    them), then send the invitation email.
+  // 3. New email: just record the pending invite. The person signs up with this
+  //    email and the signup trigger auto-joins them — no email delivery required
+  //    (Supabase's built-in mailer is rate-limited and unreliable).
   await admin
     .from('workspace_invites')
     .upsert(
       { workspace_id: workspaceId, email, invited_by: callerId },
       { onConflict: 'workspace_id,email', ignoreDuplicates: true },
     );
-
-  const { error: invErr } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo,
-  });
-  if (invErr) {
-    // The invite row is saved regardless; report the email problem but don't fail hard.
-    res.status(200).json({ status: 'invited', emailError: invErr.message });
-    return;
-  }
 
   res.status(200).json({ status: 'invited' });
 }
