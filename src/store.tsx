@@ -354,10 +354,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return link;
     };
 
+    // A post auto-publishes to AI Radar once BOTH content and an image are present.
+    const hasPostContent = (v: Video) =>
+      !!(v.headline || v.article || v.xPost || v.linkedinPost || v.facebookPost ||
+        v.instagramCaption || v.whatsappPost || v.youtubeShortScript);
+
     const submitPostOutput = (id: string, raw: string) => {
       const parsed = parsePostOutput(raw);
-      mutate(id, (v) => ({ ...v, ...parsed, stage: 'review' }));
-      if (cloud) savePostOutput(id, parsed).catch(reportError);
+      const current = videos.find((x) => x.id === id);
+      const willHaveContent = hasPostContent({ ...(current as Video), ...parsed });
+      const publish = willHaveContent && !!current?.imageUrl;
+      mutate(id, (v) => ({
+        ...v,
+        ...parsed,
+        approved: publish || v.approved,
+        stage: publish ? 'publish' : 'review',
+      }));
+      if (cloud) savePostOutput(id, parsed, publish).catch(reportError);
     };
 
     const approvePost = (id: string, approved: boolean) => {
@@ -369,7 +382,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!cloud) return null;
       try {
         const url = await uploadPostImage(id, file);
-        mutate(id, (v) => ({ ...v, imageUrl: url }));
+        const current = videos.find((x) => x.id === id);
+        const publish = !!current && hasPostContent(current);
+        mutate(id, (v) => ({
+          ...v,
+          imageUrl: url,
+          approved: publish || v.approved,
+          stage: publish ? 'publish' : v.stage,
+        }));
+        if (publish) await setApproved(id, true).catch(reportError);
         return url;
       } catch (e) {
         reportError(e);

@@ -25,13 +25,17 @@ const FIELDS: { key: keyof Video; name: string }[] = [
   { key: 'factCheckNotes', name: 'Fact-check notes' },
 ];
 
-export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) {
+export function PostCardSection({ v }: { v: Video }) {
   const s = useStore();
   const [draft, setDraft] = useState('');
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const parsed = !!(v.headline || v.article || v.xPost);
-  const approved = !!v.approved;
+  const hasContent = !!(
+    v.headline || v.article || v.xPost || v.linkedinPost || v.facebookPost ||
+    v.instagramCaption || v.whatsappPost || v.youtubeShortScript
+  );
+  const hasImage = !!v.imageUrl;
+  const published = !!v.approved;
 
   return (
     <div
@@ -99,7 +103,7 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
           disabled={!draft.trim()}
           style={{ marginTop: 8, border: 'none', background: draft.trim() ? 'var(--accent)' : '#D9D6CF', color: '#fff', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: draft.trim() ? 'pointer' : 'not-allowed' }}
         >
-          Submit for review
+          Submit
         </button>
       </div>
 
@@ -141,7 +145,7 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
       </div>
 
       {/* Step 3: parsed output (review only — posting happens in AI Radar) */}
-      {parsed && (
+      {hasContent && (
         <div style={{ marginTop: 18 }}>
           <div style={label}>3 · Parsed output (review)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -167,30 +171,38 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
               );
             })}
           </div>
-
-          {/* Owner approval gate */}
-          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-            {isOwner ? (
-              approved ? (
-                <>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1F9D57' }}>✓ Approved — sent to AI Radar</span>
-                  <button onClick={() => s.approvePost(v.id, false)} style={{ border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, color: 'var(--muted)', cursor: 'pointer' }}>
-                    Unapprove
-                  </button>
-                </>
-              ) : (
-                <button onClick={() => s.approvePost(v.id, true)} style={{ border: 'none', background: '#1F9D57', color: '#fff', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                  Approve &amp; send to AI Radar
-                </button>
-              )
-            ) : (
-              <span style={{ fontSize: 12.5, fontWeight: 600, color: approved ? '#1F9D57' : 'var(--muted)' }}>
-                {approved ? '✓ Approved by owner — sent to AI Radar' : 'Submitted — awaiting owner approval'}
-              </span>
-            )}
-          </div>
         </div>
       )}
+
+      {/* Auto-publish status: goes to AI Radar once content + image are both present */}
+      <div
+        style={{
+          marginTop: 16,
+          padding: '11px 13px',
+          borderRadius: 10,
+          fontSize: 13,
+          fontWeight: 600,
+          background: published ? 'color-mix(in srgb, #1F9D57 12%, #fff)' : '#FBF3E2',
+          border: `1px solid ${published ? 'color-mix(in srgb, #1F9D57 35%, var(--line))' : '#E8D9B5'}`,
+          color: published ? '#1F7D47' : '#8A6D1F',
+        }}
+      >
+        {published ? (
+          <>✓ Published to AI Radar — content + image complete</>
+        ) : (
+          <>
+            Not published yet —{' '}
+            {!hasContent && !hasImage
+              ? 'paste the AI output and upload an image.'
+              : !hasContent
+                ? 'paste the AI output.'
+                : 'upload an image.'}{' '}
+            <span style={{ fontWeight: 500, color: 'var(--muted)' }}>
+              (auto-publishes when both are added)
+            </span>
+          </>
+        )}
+      </div>
     </div>
   );
 }

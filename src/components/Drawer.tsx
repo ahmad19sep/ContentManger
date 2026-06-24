@@ -65,9 +65,7 @@ export function Drawer() {
         </div>
 
         <div style={{ flex: 1, overflow: 'auto', padding: '18px 20px 24px' }}>
-          {v.kind === 'post' && (
-            <PostCardSection v={v} isOwner={s.currentWorkspace?.role === 'owner'} />
-          )}
+          {v.kind === 'post' && <PostCardSection v={v} />}
 
           <SectionLabel>Workflow stage</SectionLabel>
           <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>

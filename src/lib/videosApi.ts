@@ -181,7 +181,11 @@ export async function removeVideo(id: string): Promise<void> {
   if (error) throw error;
 }
 
-/** Save the parsed AI output onto a post card and move it to Review. */
+/**
+ * Save the parsed AI output onto a post card. When `publish` is true (content +
+ * image both present), it goes straight to Publishing/approved so /api/ready picks
+ * it up; otherwise it stays in Review until the image is added.
+ */
 export async function savePostOutput(
   id: string,
   p: {
@@ -197,6 +201,7 @@ export async function savePostOutput(
     factCheckNotes?: string;
     riskLevel?: string;
   },
+  publish = false,
 ): Promise<void> {
   const sb = client();
   const { error } = await sb
@@ -213,7 +218,8 @@ export async function savePostOutput(
       image_prompt: p.imagePrompt ?? null,
       fact_check_notes: p.factCheckNotes ?? null,
       risk_level: p.riskLevel ?? null,
-      stage: 'review',
+      stage: publish ? 'publish' : 'review',
+      ...(publish ? { approved: true } : {}),
     })
     .eq('id', id);
   if (error) throw error;
