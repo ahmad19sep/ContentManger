@@ -10,15 +10,29 @@ function authed(req: any): boolean {
   return !!process.env.RADAR_INGEST_TOKEN && t === process.env.RADAR_INGEST_TOKEN;
 }
 
+async function resolveWorkspaceId(admin: any): Promise<string | null> {
+  if (process.env.RADAR_WORKSPACE_ID) return process.env.RADAR_WORKSPACE_ID;
+  const name = process.env.RADAR_WORKSPACE_NAME || 'AI Radar';
+  let query = admin.from('workspaces').select('id, owner_id, created_at').ilike('name', name);
+  const ownerEmail = process.env.RADAR_OWNER_EMAIL;
+  if (ownerEmail) {
+    const { data: prof } = await admin.from('profiles').select('id').ilike('email', ownerEmail).maybeSingle();
+    if (prof?.id) query = query.eq('owner_id', prof.id);
+  }
+  const { data } = await query.order('created_at', { ascending: true }).limit(1);
+  return (data && data[0]?.id) || null;
+}
+
 export default async function handler(req: any, res: any) {
   if (!authed(req)) return res.status(401).json({ error: 'unauthorized' });
 
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const ws = process.env.RADAR_WORKSPACE_ID;
-  if (!url || !key || !ws) return res.status(501).json({ error: 'not_configured' });
+  if (!url || !key) return res.status(501).json({ error: 'not_configured' });
 
   const admin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+  const ws = await resolveWorkspaceId(admin);
+  if (!ws) return res.status(200).json({});
 
   // Every member of the workspace (so idle workers show as 0, not missing).
   const { data: members } = await admin
