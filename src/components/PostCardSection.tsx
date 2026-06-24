@@ -30,7 +30,7 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const parsed = !!(v.headline || v.article || v.xPost);
-  const published = v.stage === 'publish';
+  const approved = !!v.approved;
 
   return (
     <div
@@ -168,19 +168,23 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
           </div>
 
           <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-            {published ? (
-              <>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#1F9D57' }}>✓ Published — sent to AI Radar</span>
-                {isOwner && (
+            {isOwner ? (
+              approved ? (
+                <>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1F9D57' }}>✓ Approved — sent to AI Radar</span>
                   <button onClick={() => s.approvePost(v.id, false)} style={{ border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, color: 'var(--muted)', cursor: 'pointer' }}>
-                    Move back to Review
+                    Unapprove
                   </button>
-                )}
-              </>
+                </>
+              ) : (
+                <button onClick={() => s.approvePost(v.id, true)} style={{ border: 'none', background: '#1F9D57', color: '#fff', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  Approve &amp; send to AI Radar
+                </button>
+              )
             ) : (
-              <button onClick={() => s.approvePost(v.id, true)} style={{ border: 'none', background: '#1F9D57', color: '#fff', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                Publish &amp; send to AI Radar
-              </button>
+              <span style={{ fontSize: 12.5, fontWeight: 600, color: approved ? '#1F9D57' : 'var(--muted)' }}>
+                {approved ? '✓ Approved by owner — sent to AI Radar' : 'Submitted — awaiting owner approval'}
+              </span>
             )}
           </div>
         </div>

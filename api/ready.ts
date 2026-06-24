@@ -35,8 +35,8 @@ export default async function handler(req: any, res: any) {
   const ws = await resolveWorkspaceId(admin);
   if (!ws) return res.status(200).json([]);
 
-  // A post is "approved/ready" once it reaches the Publishing stage — whether the
-  // owner or an editor moved it there. (No separate approve flag needed.)
+  // Owner-approved posts only. Return ALL of them every call (no consume-on-read):
+  // AI Radar de-dupes by id, so repeats are harmless and a stray GET can't hide a task.
   const { data, error } = await admin
     .from('videos')
     .select(
@@ -44,8 +44,7 @@ export default async function handler(req: any, res: any) {
     )
     .eq('workspace_id', ws)
     .eq('kind', 'post')
-    .eq('stage', 'publish')
-    .eq('radar_delivered', false);
+    .eq('approved', true);
   if (error) return res.status(500).json({ error: error.message });
 
   const rows = (data as any[]) || [];
@@ -78,11 +77,6 @@ export default async function handler(req: any, res: any) {
     image_prompt: r.image_prompt || '',
     fact_check_notes: r.fact_check_notes || '',
   }));
-
-  const deliverIds = rows.map((r) => r.id);
-  if (deliverIds.length) {
-    await admin.from('videos').update({ radar_delivered: true }).in('id', deliverIds);
-  }
 
   return res.status(200).json(out);
 }
