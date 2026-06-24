@@ -11,61 +11,16 @@ const label: React.CSSProperties = {
   marginBottom: 9,
 };
 
-type Field = {
-  key: keyof Video;
-  name: string;
-  /** brand colour for the Open/Post button */
-  color?: string;
-  /** builds the platform URL; if `prefill` the text rides in the URL, else we copy + open */
-  url?: (text: string, sourceUrl: string) => string;
-  prefill?: boolean;
-  openLabel?: string;
-};
-
-const FIELDS: Field[] = [
+// Caira produces + approves; AI Radar does the posting. These are just for review.
+const FIELDS: { key: keyof Video; name: string }[] = [
   { key: 'headline', name: 'Headline' },
   { key: 'article', name: 'Article' },
-  {
-    key: 'xPost',
-    name: 'X',
-    color: '#000000',
-    openLabel: 'Post on X',
-    prefill: true,
-    url: (t) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}`,
-  },
-  {
-    key: 'linkedinPost',
-    name: 'LinkedIn',
-    color: '#0A66C2',
-    url: () => 'https://www.linkedin.com/feed/?shareActive=true',
-  },
-  {
-    key: 'facebookPost',
-    name: 'Facebook',
-    color: '#1877F2',
-    url: () => 'https://www.facebook.com/',
-  },
-  {
-    key: 'instagramCaption',
-    name: 'Instagram',
-    color: '#E4405F',
-    url: () => 'https://www.instagram.com/',
-  },
-  {
-    key: 'whatsappPost',
-    name: 'WhatsApp',
-    color: '#25D366',
-    openLabel: 'Send on WhatsApp',
-    prefill: true,
-    url: (t) => `https://wa.me/?text=${encodeURIComponent(t)}`,
-  },
-  {
-    key: 'youtubeShortScript',
-    name: 'YouTube Short',
-    color: '#FF0000',
-    openLabel: 'Open YouTube Studio',
-    url: () => 'https://studio.youtube.com/',
-  },
+  { key: 'xPost', name: 'X' },
+  { key: 'linkedinPost', name: 'LinkedIn' },
+  { key: 'facebookPost', name: 'Facebook' },
+  { key: 'instagramCaption', name: 'Instagram' },
+  { key: 'whatsappPost', name: 'WhatsApp' },
+  { key: 'youtubeShortScript', name: 'YouTube Short' },
   { key: 'imagePrompt', name: 'Image prompt' },
   { key: 'factCheckNotes', name: 'Fact-check notes' },
 ];
@@ -75,68 +30,8 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
   const [draft, setDraft] = useState('');
   const [copied, setCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [flash, setFlash] = useState<string | null>(null);
   const parsed = !!(v.headline || v.article || v.xPost);
   const approved = !!v.approved;
-
-  const note = (msg: string) => {
-    setFlash(msg);
-    setTimeout(() => setFlash((m) => (m === msg ? null : m)), 1800);
-  };
-
-  const openPlatform = (f: Field, text: string) => {
-    if (!f.url) return;
-    if (!f.prefill) {
-      navigator.clipboard?.writeText(text);
-      note(`${f.name} text copied — paste it in the tab that opened`);
-    }
-    window.open(f.url(text, v.sourceUrl || ''), '_blank', 'noopener,noreferrer');
-  };
-
-  const downloadImage = async () => {
-    if (!v.imageUrl) return;
-    setDownloading(true);
-    const ext = (v.imageUrl.split('.').pop() || 'png').split(/[?#]/)[0];
-    const name = `${(v.title || 'post').replace(/[^\w-]+/g, '_').slice(0, 60)}.${ext}`;
-    try {
-      const res = await fetch(v.imageUrl);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      window.open(v.imageUrl, '_blank', 'noopener,noreferrer');
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  const btn = (bg: string): React.CSSProperties => ({
-    border: 'none',
-    background: bg,
-    color: '#fff',
-    borderRadius: 7,
-    padding: '5px 11px',
-    fontSize: 11.5,
-    fontWeight: 700,
-    cursor: 'pointer',
-  });
-  const ghostBtn: React.CSSProperties = {
-    border: '1px solid var(--line)',
-    background: 'var(--surface)',
-    color: 'var(--ink)',
-    borderRadius: 7,
-    padding: '5px 11px',
-    fontSize: 11.5,
-    fontWeight: 600,
-    cursor: 'pointer',
-  };
 
   return (
     <div
@@ -208,7 +103,7 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
         </button>
       </div>
 
-      {/* Image: upload + download */}
+      {/* Image upload (the poster the worker generates from [[IMAGE_PROMPT]]) */}
       <div style={{ marginTop: 16 }}>
         <div style={label}>Image</div>
         {v.imageUrl && (
@@ -220,88 +115,58 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
             />
           </a>
         )}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 9, padding: '8px 13px', fontSize: 13, fontWeight: 600, color: 'var(--ink)', cursor: uploading ? 'wait' : 'pointer' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <path d="M17 8l-5-5-5 5" />
-              <path d="M12 3v12" />
-            </svg>
-            {uploading ? 'Uploading…' : v.imageUrl ? 'Replace image' : 'Upload image'}
-            <input
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              disabled={uploading}
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                e.target.value = '';
-                if (!file) return;
-                setUploading(true);
-                const url = await s.uploadPostImage(v.id, file);
-                setUploading(false);
-                if (!url) alert('Upload failed. Make sure stage8.sql has been run in Supabase.');
-              }}
-            />
-          </label>
-          {v.imageUrl && (
-            <button
-              onClick={downloadImage}
-              disabled={downloading}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 9, padding: '8px 13px', fontSize: 13, fontWeight: 600, color: 'var(--ink)', cursor: downloading ? 'wait' : 'pointer' }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <path d="M7 10l5 5 5-5" />
-                <path d="M12 15V3" />
-              </svg>
-              {downloading ? 'Downloading…' : 'Download image'}
-            </button>
-          )}
-        </div>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 9, padding: '8px 13px', fontSize: 13, fontWeight: 600, color: 'var(--ink)', cursor: uploading ? 'wait' : 'pointer' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <path d="M17 8l-5-5-5 5" />
+            <path d="M12 3v12" />
+          </svg>
+          {uploading ? 'Uploading…' : v.imageUrl ? 'Replace image' : 'Upload image'}
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            disabled={uploading}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              setUploading(true);
+              const url = await s.uploadPostImage(v.id, file);
+              setUploading(false);
+              if (!url) alert('Upload failed. Make sure stage8.sql has been run in Supabase.');
+            }}
+          />
+        </label>
       </div>
 
-      {/* Step 3: parsed output — copy + open each platform */}
+      {/* Step 3: parsed output (review only — posting happens in AI Radar) */}
       {parsed && (
         <div style={{ marginTop: 18 }}>
-          <div style={label}>3 · Parsed output — copy or open each platform</div>
+          <div style={label}>3 · Parsed output (review)</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {FIELDS.map((f) => {
-              const text = v[f.key] as string | undefined;
+            {FIELDS.map(({ key, name }) => {
+              const text = v[key] as string | undefined;
               if (!text) return null;
               return (
-                <details key={f.key} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)' }}>
-                  <summary style={{ cursor: 'pointer', padding: '8px 11px', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {f.color && <span style={{ width: 8, height: 8, borderRadius: 3, background: f.color, flex: 'none' }} />}
-                    {f.name}
+                <details key={key} style={{ border: '1px solid var(--line)', borderRadius: 8, background: 'var(--surface)' }}>
+                  <summary style={{ cursor: 'pointer', padding: '8px 11px', fontSize: 12.5, fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>{name}</span>
+                    <span
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigator.clipboard?.writeText(text);
+                      }}
+                      style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}
+                    >
+                      Copy
+                    </span>
                   </summary>
-                  <div style={{ padding: '0 11px 11px' }}>
-                    <div style={{ fontSize: 12.5, color: '#444', whiteSpace: 'pre-wrap', lineHeight: 1.5, marginBottom: 9 }}>{text}</div>
-                    <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard?.writeText(text);
-                          note(`${f.name} copied`);
-                        }}
-                        style={ghostBtn}
-                      >
-                        Copy
-                      </button>
-                      {f.url && (
-                        <button onClick={() => openPlatform(f, text)} style={btn(f.color || 'var(--accent)')}>
-                          {f.prefill ? f.openLabel : `Open ${f.name}`}
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  <div style={{ padding: '0 11px 11px', fontSize: 12.5, color: '#444', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{text}</div>
                 </details>
               );
             })}
           </div>
-
-          {flash && (
-            <div style={{ marginTop: 9, fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>{flash}</div>
-          )}
 
           {/* Owner approval gate */}
           <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
