@@ -72,6 +72,7 @@ export interface Video {
   whatsappPost?: string;
   youtubeShortScript?: string;
   imagePrompt?: string;
+  imageUrl?: string;
   factCheckNotes?: string;
   riskLevel?: string;
 }

@@ -28,7 +28,9 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
   const s = useStore();
   const [draft, setDraft] = useState('');
   const [copied, setCopied] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const parsed = !!(v.headline || v.article || v.xPost);
+  const published = v.stage === 'publish';
 
   return (
     <div
@@ -100,7 +102,44 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
         </button>
       </div>
 
-      {/* Step 3: parsed preview + approve */}
+      {/* Image */}
+      <div style={{ marginTop: 16 }}>
+        <div style={label}>Image</div>
+        {v.imageUrl && (
+          <a href={v.imageUrl} target="_blank" rel="noreferrer">
+            <img
+              src={v.imageUrl}
+              alt="post"
+              style={{ width: '100%', maxHeight: 220, objectFit: 'contain', borderRadius: 10, border: '1px solid var(--line)', background: '#fff', marginBottom: 8 }}
+            />
+          </a>
+        )}
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7, border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 9, padding: '8px 13px', fontSize: 13, fontWeight: 600, color: 'var(--ink)', cursor: uploading ? 'wait' : 'pointer' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <path d="M17 8l-5-5-5 5" />
+            <path d="M12 3v12" />
+          </svg>
+          {uploading ? 'Uploading…' : v.imageUrl ? 'Replace image' : 'Upload image'}
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            disabled={uploading}
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              setUploading(true);
+              const url = await s.uploadPostImage(v.id, file);
+              setUploading(false);
+              if (!url) alert('Upload failed. Make sure stage8.sql has been run in Supabase.');
+            }}
+          />
+        </label>
+      </div>
+
+      {/* Step 3: parsed preview + send */}
       {parsed && (
         <div style={{ marginTop: 18 }}>
           <div style={label}>3 · Parsed output</div>
@@ -128,22 +167,22 @@ export function PostCardSection({ v, isOwner }: { v: Video; isOwner: boolean }) 
             })}
           </div>
 
-          {isOwner && (
-            <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-              {v.approved ? (
-                <>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#1F9D57' }}>✓ Approved — sent to AI Radar</span>
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+            {published ? (
+              <>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#1F9D57' }}>✓ Published — sent to AI Radar</span>
+                {isOwner && (
                   <button onClick={() => s.approvePost(v.id, false)} style={{ border: '1px solid var(--line)', background: 'var(--surface)', borderRadius: 8, padding: '6px 11px', fontSize: 12, fontWeight: 600, color: 'var(--muted)', cursor: 'pointer' }}>
-                    Unapprove
+                    Move back to Review
                   </button>
-                </>
-              ) : (
-                <button onClick={() => s.approvePost(v.id, true)} style={{ border: 'none', background: '#1F9D57', color: '#fff', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                  Approve &amp; send to AI Radar
-                </button>
-              )}
-            </div>
-          )}
+                )}
+              </>
+            ) : (
+              <button onClick={() => s.approvePost(v.id, true)} style={{ border: 'none', background: '#1F9D57', color: '#fff', borderRadius: 9, padding: '9px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                Publish &amp; send to AI Radar
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

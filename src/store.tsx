@@ -18,6 +18,7 @@ import {
   savePostOutput,
   setApproved,
   subscribeVideos,
+  uploadPostImage,
 } from './lib/videosApi';
 import { parsePostOutput } from './lib/parsePostOutput';
 import {
@@ -170,6 +171,7 @@ export interface Store {
   createDriveFolder: (id: string) => Promise<string | null>;
   submitPostOutput: (id: string, raw: string) => void;
   approvePost: (id: string, approved: boolean) => void;
+  uploadPostImage: (id: string, file: File) => Promise<string | null>;
   deleteVideo: (id: string) => void;
   openModal: (stage?: StageId) => void;
   closeModal: () => void;
@@ -359,8 +361,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
 
     const approvePost = (id: string, approved: boolean) => {
-      mutate(id, (v) => ({ ...v, approved, ...(approved ? { stage: 'publish' as const } : {}) }));
+      mutate(id, (v) => ({ ...v, approved, stage: approved ? 'publish' : 'review' }));
       if (cloud) setApproved(id, approved).catch(reportError);
+    };
+
+    const uploadImage = async (id: string, file: File) => {
+      if (!cloud) return null;
+      try {
+        const url = await uploadPostImage(id, file);
+        mutate(id, (v) => ({ ...v, imageUrl: url }));
+        return url;
+      } catch (e) {
+        reportError(e);
+        return null;
+      }
     };
 
     const deleteVideo = (id: string) => {
@@ -579,6 +593,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       createDriveFolder,
       submitPostOutput,
       approvePost,
+      uploadPostImage: uploadImage,
       deleteVideo,
       openModal,
       closeModal,

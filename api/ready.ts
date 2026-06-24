@@ -35,14 +35,16 @@ export default async function handler(req: any, res: any) {
   const ws = await resolveWorkspaceId(admin);
   if (!ws) return res.status(200).json([]);
 
+  // A post is "approved/ready" once it reaches the Publishing stage — whether the
+  // owner or an editor moved it there. (No separate approve flag needed.)
   const { data, error } = await admin
     .from('videos')
     .select(
-      'id, title, headline, article, x_post, linkedin_post, facebook_post, instagram_caption, whatsapp_post, youtube_short_script, image_prompt, fact_check_notes, risk_level, assignee_id, news_source, source_url, drive',
+      'id, title, headline, article, x_post, linkedin_post, facebook_post, instagram_caption, whatsapp_post, youtube_short_script, image_prompt, image_url, fact_check_notes, risk_level, assignee_id, news_source, source_url, drive',
     )
     .eq('workspace_id', ws)
     .eq('kind', 'post')
-    .eq('approved', true)
+    .eq('stage', 'publish')
     .eq('radar_delivered', false);
   if (error) return res.status(500).json({ error: error.message });
 
@@ -65,6 +67,7 @@ export default async function handler(req: any, res: any) {
     assignee: r.assignee_id ? emailById.get(r.assignee_id) || '' : '',
     risk_level: r.risk_level || '',
     drive_url: r.drive || '',
+    image_url: r.image_url || '',
     article: r.article || '',
     x_post: r.x_post || '',
     linkedin_post: r.linkedin_post || '',

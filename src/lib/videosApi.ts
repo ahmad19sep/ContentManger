@@ -32,6 +32,7 @@ interface VideoRow {
   whatsapp_post?: string | null;
   youtube_short_script?: string | null;
   image_prompt?: string | null;
+  image_url?: string | null;
   fact_check_notes?: string | null;
   risk_level?: string | null;
 }
@@ -65,6 +66,7 @@ function rowToVideo(r: VideoRow): Video {
     whatsappPost: r.whatsapp_post ?? undefined,
     youtubeShortScript: r.youtube_short_script ?? undefined,
     imagePrompt: r.image_prompt ?? undefined,
+    imageUrl: r.image_url ?? undefined,
     factCheckNotes: r.fact_check_notes ?? undefined,
     riskLevel: r.risk_level ?? undefined,
   };
@@ -217,12 +219,27 @@ export async function savePostOutput(
   if (error) throw error;
 }
 
+/** Upload an image to the public post-images bucket and save its URL on the card. */
+export async function uploadPostImage(videoId: string, file: File): Promise<string> {
+  const sb = client();
+  const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+  const path = `${videoId}/${Date.now()}.${ext}`;
+  const { error } = await sb.storage
+    .from('post-images')
+    .upload(path, file, { upsert: true, contentType: file.type || undefined });
+  if (error) throw error;
+  const url = sb.storage.from('post-images').getPublicUrl(path).data.publicUrl;
+  const { error: e2 } = await sb.from('videos').update({ image_url: url }).eq('id', videoId);
+  if (e2) throw e2;
+  return url;
+}
+
 /** Owner approval — flags the post so /api/ready hands it back to AI Radar. */
 export async function setApproved(id: string, approved: boolean): Promise<void> {
   const sb = client();
   const { error } = await sb
     .from('videos')
-    .update(approved ? { approved: true, stage: 'publish' } : { approved: false })
+    .update(approved ? { approved: true, stage: 'publish' } : { approved: false, stage: 'review' })
     .eq('id', id);
   if (error) throw error;
 }
